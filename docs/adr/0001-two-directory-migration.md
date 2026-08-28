@@ -40,11 +40,22 @@ All source-side files go under `<source>/migration-metadata/`; nothing is ever w
 - `SKILL.md` and the modules must resolve and thread two paths instead of assuming the working directory is the project (build, code, frontend, testing, cleanup).
 - The final verification checks run against the target directory.
 - The git workflow module must be redesigned: the target is a new repository, so the branch-per-run model on the original repo no longer applies as-is.
-- The test harness in `tests/` must create a target directory per run and point its checks at it (today runners and checks assume in-place).
 - Documentation (skill README, repo README) must describe the two-directory usage.
 - Migrating the same source repeatedly (benchmark runs) can reuse the source-side extractions in `<source>/migration-metadata/`.
 - Resuming an interrupted migration requires knowing the target directory, since the progress state (`migration-context.json`) lives there. The default sibling naming makes it discoverable from the source path; with a custom target the user must provide the path again.
 - Disk usage doubles per migration run; acceptable for the project sizes targeted.
+
+### Changes to the test sub-project (`./tests`)
+
+Today the harness copies `tests/projects/<name>/source/` into a workdir and the agent migrates it in place; all checks run against that single directory. With this decision:
+
+- The runners create a separate target directory per run (e.g. `target/workdirs/<name>/` as read-only source copy and `target/workdirs/<name>-quarkus/` as migration target) and pass both paths in the prompt.
+- All automated checks (build, tests pass, no Spring deps, has Quarkus, starts up, smoke tests) point at the target directory.
+- Each project under `tests/projects/` keeps, next to `source/`, a **reference migrated project** (e.g. `migrated/`). This reference allows:
+  - a user to verify and compare a migration run against a known-good result,
+  - documenting the migration process step by step,
+  - a CI job to compile and test both the source and the migrated reference,
+  - supporting several source versions over time (Spring Boot 3.x, 4.x, ...) with their corresponding references.
 
 ## Open questions
 
