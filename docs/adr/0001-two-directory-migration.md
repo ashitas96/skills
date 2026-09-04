@@ -8,15 +8,16 @@
 The `migrate-spring-to-quarkus` skill currently migrates projects in place: the agent transforms the Spring Boot project inside its own directory, and the 
 migration result replaces the original code.
 
-As the skill evolves to support features like deterministic validators (issue #39) and resumable state (issue #40), an alternative model has surfaced: 
+As the skill evolves to support features like comparison-based validation (proposed in issue #39) and resumable state (issue #40), an alternative model has surfaced: 
 migrating into a separate target directory, keeping the source project untouched.
 
 ## Decision Drivers
 
-- **Deterministic validators.** The Java validators contributed by IBM (issue #39) verify migration correctness by comparing metadata extracted from the 
-Spring code against metadata extracted from the Quarkus code (entities, REST endpoints, messaging channels, configuration). 
-This comparison requires both versions of the code to exist at the same time. 
-With in-place migration the original code is gone once a module runs, so the validators cannot work without git history manipulation.
+- **Comparison-based verification.** Verifying migration correctness by comparing metadata extracted from the 
+Spring code against metadata extracted from the Quarkus code (entities, REST endpoints, messaging channels, configuration) 
+requires both versions of the code to exist at the same time. 
+This applies to any tool or check doing such a comparison; the validators proposed in issue #39 are one candidate, still under discussion. 
+With in-place migration the original code is gone once a module runs, so this kind of verification is not possible without git history manipulation.
 - **Cleaner reasoning for agents.** With a read-only source, the agent cannot accidentally destroy unmigrated code, 
 and "what is left to migrate" is always answerable by comparing the two trees. 
 The target project follows Quarkus conventions from scratch instead of inheriting the legacy layout.
@@ -35,7 +36,7 @@ The agent can accidentally destroy unmigrated code, and there is no permanent di
 ### Two-directory migration (source -> target)
 
 The agent reads from a read-only source directory and writes the Quarkus project into a separate target directory. 
-Both versions of the code coexist, enabling deterministic validators, safer agent reasoning, and a complete audit trail.
+Both versions of the code coexist, enabling comparison-based verification, safer agent reasoning, and a complete audit trail.
 
 Trade-off: disk usage doubles per migration run (acceptable for the project sizes targeted), and `SKILL.md` plus modules must thread two paths instead of one.
 
@@ -75,7 +76,7 @@ With this decision:
 
 Positives:
 
-- The deterministic validators (issue #39) can run as designed, comparing source and target extractions.
+- Comparison-based verification becomes possible: any tool can compare source and target extractions (the validators proposed in issue #39 are one candidate, if adopted).
 - Migrating the same source repeatedly (benchmark runs) can reuse the source-side extractions in `<source>/migration-metadata/`.
 - The diff between source and target is a permanent audit trail.
 
@@ -86,7 +87,3 @@ Negatives:
 - Documentation (skill README, repo README) must describe the two-directory usage.
 - Disk usage doubles per migration run.
 - Resuming an interrupted migration requires knowing the target directory, since the progress state (`migration-context.json`) lives there. The default sibling naming makes it discoverable from the source path; with a custom target the user must provide the path again.
-
-## Open Questions
-
-- **Target-side layout.** The migration artifacts currently land as three entries at the target root (`migration-reports/`, `migration-metadata/`, plus `migration-spec.yaml` and `migration-summary.md`). Grouping everything under a single directory (e.g. `.migration/`) would keep the generated project root clean and make the `.gitignore` a single line. To be discussed in #58; does not change the decision above.
