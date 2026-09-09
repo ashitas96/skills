@@ -44,8 +44,7 @@ Trade-off: disk usage doubles per migration run (acceptable for the project size
 The skill adopts a two-directory migration model:
 
 - **Source directory**: the original project to migrate, read-only. The skill may write extraction metadata under `<source>/migration-metadata/` to describe the source app. These files are reusable across migration runs against the same project, so they live with it. Nothing is ever written at the source root or anywhere else in the source tree.
-- **Target directory**: the generated migrated project. All migration artifacts other than the source-side extractions live here.
-- **Target resolution**: the skill defaults to a sibling directory named `<source-name>-quarkus`. In interactive mode it proposes this default and asks for confirmation; in autonomous mode it uses it directly.
+- **Target directory**: the generated migrated project. All migration artifacts other than the source-side extractions live here. By default, it is named `<source-name>-quarkus` as a sibling of the source. In interactive mode the skill proposes this default and asks for confirmation; in autonomous mode it uses it directly.
 
 The specific files produced, the resume mechanism, and the post-migration cleanup are implementation details to be defined in issue #58.
 
@@ -56,7 +55,7 @@ The specific files produced, the resume mechanism, and the post-migration cleanu
 Today the harness copies `tests/projects/<name>/source/` into a workdir and the agent migrates it in place; all checks run against that single directory. 
 With this decision:
 
-- The runners create a separate target directory per run (e.g. `target/workdirs/<name>/` as read-only source copy and `target/workdirs/<name>-quarkus/` as migration target) and pass both paths in the prompt.
+- The specific runner creates a separate target directory per run (e.g. `target/workdirs/<name>/` as read-only source copy and `target/workdirs/<name>-quarkus/` as migration target) and pass both paths in the prompt.
 - All automated checks (build, tests pass, no Spring deps, has Quarkus, starts up, smoke tests) point to the target directory.
 - Each project under `tests/projects/` keeps, next to `source/`, a **reference migrated project** (e.g. `migrated/`). This reference allows:
   - a user to verify and compare a migration run against a known-good result,
@@ -69,7 +68,7 @@ With this decision:
 Positives:
 
 - Comparison-based verification becomes possible: any tool can compare source and target extractions (the validators proposed in issue #39 are one candidate, if adopted).
-- Migrating the same source repeatedly (benchmark runs) can reuse the source-side extractions in `<source>/migration-metadata/`.
+- Migrating the same source repeatedly (benchmark runs) can reuse the source-side extractions without re-running them.
 - The comparison between source and target is a permanent audit trail.
 
 Negatives:
