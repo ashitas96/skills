@@ -46,7 +46,6 @@ The skill adopts a two-directory migration model:
 - **Source directory**: the original project to migrate, read-only. The skill may write extraction metadata under `<source>/migration-metadata/` to describe the source app. These files are reusable across migration runs against the same project, so they live with it. Nothing is ever written at the source root or anywhere else in the source tree.
 - **Target directory**: the generated migrated project. All migration artifacts other than the source-side extractions live here. By default, it is named `<source-name>-quarkus` as a sibling of the source. In interactive mode the skill proposes this default and asks for confirmation; in autonomous mode it uses it directly.
 
-The specific files produced, the resume mechanism, and the post-migration cleanup are implementation details to be defined in issue #58.
 
 ## Scenarios
 
