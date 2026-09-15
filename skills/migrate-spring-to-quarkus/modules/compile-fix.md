@@ -23,7 +23,7 @@ Reason: <compiler error message>
 Attempted fixes: <brief description of what was tried>
 ```
 
-Then ask the user whether to continue with the next module or stop the migration.
+Then return control to SKILL.md (the Execution Protocol handles what to do next).
 
 ## Common Error Patterns
 
