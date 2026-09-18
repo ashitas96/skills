@@ -110,7 +110,9 @@ FOR module IN [build, code, frontend, testing, cleanup]:
   3. LOAD — read the module file and relevant reference files
   4. EXECUTE — follow the module instructions, adapting to the chosen strategy
   5. COMPILE — run the project's compile command (`./mvnw clean compile -DskipTests` for Maven, `./gradlew clean compileJava -x test` for Gradle)
-     Fails → diagnose and fix before proceeding
+     Fails → load [modules/compile-fix.md](modules/compile-fix.md) and follow the retry procedure.
+             If compile-fix reports MANUAL_REVIEW_REQUIRED (unresolved errors after 3 retries),
+             ask the user whether to continue with the next module or stop the migration.
   6. LOG — mark checkbox as done
 ```
 
