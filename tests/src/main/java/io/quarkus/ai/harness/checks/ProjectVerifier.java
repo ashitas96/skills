@@ -252,8 +252,9 @@ public class ProjectVerifier {
         String url = "http://localhost:" + appPort + ep.path();
         int expected = ep.effectiveExpectedStatus();
         String lastError = null;
+        int attempt = 0;
 
-        for (int attempt = 1; attempt <= ENDPOINT_MAX_RETRIES; attempt++) {
+        for (attempt = 1; attempt <= ENDPOINT_MAX_RETRIES; attempt++) {
             try {
                 HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                         .uri(URI.create(url))
@@ -297,19 +298,24 @@ public class ProjectVerifier {
                     }
                     return statusOk && bodyOk;
                 }
-            } catch (Exception e) {
-                // Connection error (refused, timeout, etc.), retry
+            } catch (IOException | InterruptedException e) {
+                // Transient transport error (refused, timeout, etc.), retry
                 lastError = e.getMessage();
                 if (attempt == ENDPOINT_MAX_RETRIES) break;
             }
 
-            // Common retry path for both transient 404 and connection errors
+            // Common retry path for both transient 404 and transport errors
             System.out.printf("      RETRY %s %s -> %s (attempt %d/%d)%n",
                     ep.effectiveMethod(), ep.path(), lastError, attempt, ENDPOINT_MAX_RETRIES);
-            try { Thread.sleep(ENDPOINT_RETRY_DELAY_MS); } catch (InterruptedException ie) { break; }
+            try {
+                Thread.sleep(ENDPOINT_RETRY_DELAY_MS);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+            }
         }
         System.out.printf("      FAIL %s %s -> %s (after %d attempts)%n",
-                ep.effectiveMethod(), ep.path(), lastError, ENDPOINT_MAX_RETRIES);
+                ep.effectiveMethod(), ep.path(), lastError, attempt);
         return false;
     }
 
