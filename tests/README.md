@@ -200,7 +200,7 @@ mvn test \
 // or using project.yaml definition
 mvn test -Dai.projects=dummy -Dai.prompt="Say Hello."  
 ```
-Verify if there is under the following path `/target/workdirs/dummy` a `HELLO.md created !
+Verify if there is under the following path `target/workdirs/dummy-quarkus/` a `HELLO.md` created!
   
 2. Spring Boot TODO
 
@@ -279,17 +279,42 @@ A negative delta means the second skill used fewer resources or ran faster.
 > [!NOTE]
 > Run artifacts in `target/runs/` are **not deleted** between projects or skills within the same `mvn test` invocation. Each run produces its own distinct report file.
 
+## Two-directory migration model
+
+The harness uses a **two-directory model** where the source project is read-only and the agent writes the migrated project into a separate target directory:
+
+```
+target/workdirs/
+  spring-rest-api/          # source (read-only copy of the original project)
+  spring-rest-api-quarkus/  # target (agent writes the migrated project here)
+```
+
+This separation enables:
+- **Safe comparison** between source and target after migration
+- **Deterministic verification**: checks always run against the target directory
+- **Auditability**: the source is never modified, so you can diff source vs. target
+
+The agent receives both paths in its prompt and is instructed not to modify the source. The build module copies the source into the target as its first step, then all subsequent modules transform files in the target.
+
+### Standalone checks
+
+You can re-run verification checks against an existing target directory without re-running the agent:
+
+```bash
+mvn exec:exec@checks -Dai.projects=spring-rest-api
+```
+
+This looks for `target/workdirs/<project>-quarkus/` and runs the checks defined in `project.yaml`.
+
 ## What Happens During a Test Run
 
 Each test project goes through these phases:
 
-1. **Prepare** — copies local source or clones external repo into `target/workdirs/<project>/`
-2. **Migrate** — runs `AI` agent with the migration skill against the project (output streams to console)
-3. **Check** — runs verification checks (builds, tests pass, no Spring deps, has Quarkus, starts up)
-4  **Record** — appends results to `results/history.jsonl`
-
-Future iterations of this project will propose some improvements and new steps such as:
-**Review** — forks the migration session and asks agent to review the skill and suggest improvements (separate session, separate cost)
+1. **Prepare** -- copies local source or clones external repo into `target/workdirs/<project>/` (source) and creates an empty `target/workdirs/<project>-quarkus/` (target)
+2. **Migrate** -- runs the AI agent with the migration skill, passing both source and target paths (output streams to console)
+3. **Check** -- runs verification checks against the target directory (builds, tests pass, no Spring deps, has Quarkus, starts up)
+4. **Review** -- forks the migration session and asks the agent to review the skill and suggest improvements (separate session, separate cost)
+5. **Record** -- appends results to `target/runs/history.jsonl`
 
 ## Test Output
 
@@ -331,7 +356,7 @@ target/runs/
 └── ses_<opencode-session-id>.session.jsonl
 ```
 
-**`target/workdirs/<project>/`** — the project source code (pom.xml, src/, etc.)
+**`target/workdirs/<project>/`** -- read-only source copy; **`target/workdirs/<project>-quarkus/`** -- the migrated project (pom.xml, src/, etc.)
 
 You can resume a migration session to inspect or continue using AI agent command:
 

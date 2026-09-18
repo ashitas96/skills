@@ -41,7 +41,7 @@ public class Main {
             if (!result.failures().isEmpty() && !result.benchmark()) {
                 System.err.println("\nFAILED: " + entry.config().name());
                 System.err.println("  Checks failed: " + result.failures());
-                System.err.println("  Work dir: " + result.workDir());
+                System.err.println("  Target dir: " + result.targetDir());
                 System.err.println("  Score: " + result.score());
                 anyFailure = true;
             }

@@ -59,7 +59,7 @@ class MigrationTest {
 
         if (!result.failures().isEmpty() && !result.benchmark()) {
             fail("Migration checks failed: " + result.failures() + "\n" +
-                    "Work dir preserved at: " + result.workDir() + "\n" +
+                    "Target dir preserved at: " + result.targetDir() + "\n" +
                     "Score: " + result.score());
         }
     }

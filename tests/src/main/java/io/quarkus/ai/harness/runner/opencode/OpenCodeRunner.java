@@ -40,7 +40,7 @@ public class OpenCodeRunner extends AbstractRunner implements AgentRunner {
      * @param runName prefix for output files (e.g. "spring-rest-api_anthropic_full")
      */
     @Override
-    public RunOutput run(Path projectDir, Path outputDir, String runName) throws IOException, InterruptedException {
+    public RunOutput run(Path sourceDir, Path targetDir, Path outputDir, String runName) throws IOException, InterruptedException {
 
         streamToolCount = 0;
 
@@ -57,21 +57,24 @@ public class OpenCodeRunner extends AbstractRunner implements AgentRunner {
         writeOpenCodeConfiguration();
 
         // Use the user's prompt or the one to be used for the migration test
-        var userPrompt = prompt.isEmpty() ? generateMigrationPrompt() : prompt;
+        var userPrompt = prompt.isEmpty() ? generateMigrationPrompt(sourceDir, targetDir) : prompt;
 
+        Path workingDir = sourceDir.getParent();
         List<String> cmd = new ArrayList<>();
         // Wrap with script to provide a pseudo-TTY — without it, opencode suppresses stdout output
         cmd.addAll(List.of("script", "-q", "/dev/null"));
         cmd.add(aiCmd);
         cmd.add("run");
         cmd.addAll(List.of("--format", "json"));
-        cmd.addAll(List.of("--dir", projectDir.toString()));
+        cmd.addAll(List.of("--dir", workingDir.toString()));
         cmd.addAll(List.of("--title", runName)); // Use as title the name of the run session
         addModelArgs(cmd);
 
         cmd.add(userPrompt);
 
-        System.out.println("  ai cwd:     " + projectDir);
+        System.out.println("  ai cwd:     " + workingDir);
+        System.out.println("  source:     " + sourceDir);
+        System.out.println("  target:     " + targetDir);
         System.out.println("  output dir: " + outputDir);
         System.out.println("  run name:   " + runName);
         System.out.println("  ai cmd:   " + cmd);
@@ -81,7 +84,7 @@ public class OpenCodeRunner extends AbstractRunner implements AgentRunner {
         Path prettyFile = outputDir.resolve(runName + ".pretty.md");
 
         ProcessBuilder pb = new ProcessBuilder(cmd)
-                .directory(projectDir.toFile())
+                .directory(workingDir.toFile())
                 .redirectErrorStream(true);
 
         Instant start = Instant.now();
@@ -259,7 +262,7 @@ public class OpenCodeRunner extends AbstractRunner implements AgentRunner {
     }
 
     @Override
-    public ReviewOutput review(String migrationSessionFile, Path projectDir, Path outputDir,
+    public ReviewOutput review(String migrationSessionFile, Path targetDir, Path outputDir,
             String runName, Path skillPath,
             Map<String, Boolean> checkResults) throws InterruptedException, IOException {
         if (migrationSessionFile == null) {
@@ -310,7 +313,7 @@ public class OpenCodeRunner extends AbstractRunner implements AgentRunner {
         System.out.println("  ── Skill Review ──────────────────────────────────────");
 
         ProcessBuilder pb = new ProcessBuilder(cmd)
-                .directory(projectDir.toFile())
+                .directory(targetDir.toFile())
                 .redirectErrorStream(true);
 
         Instant start = Instant.now();

@@ -75,7 +75,8 @@ public class ResultsTracker {
         node.put("score", result.score());
         node.put("ai_exit_code", result.getAiExitCode());
         node.put("run_name", result.getRunName());
-        node.put("workdir", result.getWorkDir());
+        node.put("source_dir", result.getSourceDir());
+        node.put("target_dir", result.getTargetDir());
 
         if (result.getReview() != null && !result.getReview().isBlank()) {
             ObjectNode review = node.putObject("review");

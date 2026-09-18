@@ -20,7 +20,8 @@ Modular, gate-driven migration of Spring Boot applications to Quarkus.
     - Spring-specific patterns without a clear Quarkus equivalent
     - Configuration or wiring code whose purpose is unclear
       If you must remove code (e.g., a Spring-only base class), document what was removed and why in a `// REMOVED:` comment at the same location.
-- **Don't break the build.** Run the compile command after each phase (`./mvnw clean compile -DskipTests` for Maven, `./gradlew clean compileJava -x test` for Gradle). Never move to the next phase with a broken build.
+- **Don't break the build.** Run the compile command in `<target>` after each phase (`cd <target> && ./mvnw clean compile -DskipTests` for Maven, `cd <target> && ./gradlew clean compileJava -x test` for Gradle). Never move to the next phase with a broken build.
+- **Source is read-only.** Never modify files in `<source>`. All changes go into `<target>`. The only exception is `<source>/migration-metadata/`, where extraction metadata may be written.
 - **Document every decision.** When choosing between migration approaches, explain the trade-off to the user.
 - **No silent changes.** Every file modification must be intentional and traceable. If a check fails after a phase, diagnose and fix — don't skip the check or delete the failing code.
 
@@ -35,15 +36,34 @@ Load the relevant reference file when working on a module:
 | [references/config-map.md](references/config-map.md) | Build module: configuration property migration |
 
 
-## Step 1: Analyze & Choose Strategy
+## Step 1: Resolve Directories, Analyze & Choose Strategy
 
-Scan the application to understand what needs to migrate:
+### Directory resolution
 
-- **Build system**: Read the build file (`pom.xml` for Maven, `build.gradle` or `build.gradle.kts` for Gradle) — Spring Boot version, starters, plugins
-- **Java code**: Search for Spring annotations (DI, REST, Data, Security, Scheduling)
-- **Configuration**: Read `application.properties`/`application.yml`, check for profiles
-- **UI / View layer**: Check for Thymeleaf/JSP templates, static resources, Model+View patterns
-- **Tests**: Check for `@SpringBootTest`, `@WebMvcTest`, `@DataJpaTest`
+The migration uses two directories: a read-only **source** (the Spring project) and a **target** (the Quarkus project to generate).
+
+1. Identify `<source>`: the Spring Boot project directory the user points to.
+2. Resolve `<target>`: default is `<source-name>-quarkus/` as a sibling of `<source>`. Example: if the source is `~/projects/petclinic`, the target is `~/projects/petclinic-quarkus`.
+
+In **interactive mode**, propose the default target path and ask for confirmation together with the strategy question (Step 1 below). In **autonomous mode** (strategy resolved from argument or config file), use the default directly.
+
+If `<target>` already exists, ask the user whether to overwrite it or choose a different path.
+
+Log both resolved paths before continuing:
+```
+Source: <source-path>
+Target: <target-path>
+```
+
+### Analyze the source project
+
+Scan `<source>` to understand what needs to migrate:
+
+- **Build system**: Read `<source>/pom.xml` (Maven) or `<source>/build.gradle(.kts)` (Gradle) -- Spring Boot version, starters, plugins
+- **Java code**: Search `<source>/src/` for Spring annotations (DI, REST, Data, Security, Scheduling)
+- **Configuration**: Read `<source>/src/main/resources/application.properties` or `application.yml`, check for profiles
+- **UI / View layer**: Check for Thymeleaf/JSP templates in `<source>/src/main/resources/templates/`, static resources in `<source>/src/main/resources/static/`
+- **Tests**: Check `<source>/src/test/` for `@SpringBootTest`, `@WebMvcTest`, `@DataJpaTest`
 
 Present a summary table with area, findings, and complexity. Then choose the migration strategy:
 
@@ -52,7 +72,7 @@ Present a summary table with area, findings, and complexity. Then choose the mig
 Resolve the strategy using the following priority (first match wins):
 
 1. **Skill argument** — if the skill was invoked with a `strategy` argument (`spring-compat` or `full-quarkus`), use it directly.
-2. **Project config file** — check for `.quarkus-migration.yml` in the project root. If it exists and contains a `strategy` field, use that value. Example file:
+2. **Project config file** — check for `.quarkus-migration.yml` in `<source>` root. If it exists and contains a `strategy` field, use that value. Example file:
    ```yaml
    # .quarkus-migration.yml
    strategy: spring-compat   # or full-quarkus
@@ -65,17 +85,7 @@ Resolve the strategy using the following priority (first match wins):
 
 If the strategy was resolved from an argument or config file, log: `Strategy: <value> (source: <argument|config file>)` and continue without asking.
 
-## Step 2: Git branch (optional)
-
-After the user has chosen a strategy, check if the target project is a git repository. If it is, propose the git workflow:
-
-> **Migration workflow:** Each migration run can be isolated in its own branch (`migration/run-01`, `migration/run-02`, ...) created from `main`. The branch will contain a single commit with all changes plus a migration report. A draft PR against `main` will be created for review — it is never merged, it serves as a permanent diff and discussion record. **Would you like to use this workflow?**
-
-- **User accepts** → follow [modules/git/git.md](modules/git/git.md) — **Pre-migration** section. Propose the branch name and wait for confirmation before creating it.
-- **User declines** → skip git management entirely, proceed with migration in the current branch.
-- **Not a git repo** → inform the user, skip git management, proceed normally.
-
-## Step 3: Execute Modules
+## Step 2: Execute Modules
 
 ## Instructions
 
@@ -85,10 +95,10 @@ After the user has chosen a strategy, check if the target project is a git repos
 
 ### Decision Gate Table 
 
-- For each module, evaluate whether it applies to this project. A module executes only when its gate status is: **PASS**.
-- Inspect the project to determine the gate result — do not rely on blind grep commands; use your understanding of the codebase.
+- For each module, evaluate whether it applies by inspecting `<source>`. A module executes only when its gate status is: **PASS**.
+- Inspect `<source>` to determine the gate result -- do not rely on blind grep commands; use your understanding of the codebase.
 
-| Module                                        | Gate Check                                                                                                                | Gate Result                                                                              |
+| Module                                        | Gate Check (inspect `<source>`)                                                                                           | Gate Result                                                                              |
 |-----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
 | [jdk](modules/jdk/jdk.md)                     | JDK 21+ required                                   | **ALWAYS** -- stop migration if < 21 |
 | [build](modules/build/build.md)               | Spring Boot parent/starters/`spring-boot-maven-plugin` in `pom.xml`, or Spring Boot/`io.spring.dependency-management` plugins in `build.gradle(.kts)` | **PASS** if Spring Boot build markers found; **SKIP** otherwise                          |
@@ -103,14 +113,14 @@ After the user has chosen a strategy, check if the target project is a git repos
 ```
 FOR module IN [build, code, messaging, frontend, testing, cleanup]:
 
-  1. EVALUATE — inspect the project for the gate condition
+  1. EVALUATE — inspect <source> for the gate condition
   2. DECIDE
      IF gate == ALWAYS → proceed to step 3
      IF gate == PASS   → proceed to step 3
      IF gate == SKIP   → log "Module {name}: SKIPPED — {reason}", mark checkbox, continue
   3. LOAD — read the module file and relevant reference files
-  4. EXECUTE — follow the module instructions, adapting to the chosen strategy
-  5. COMPILE — run the project's compile command (`./mvnw clean compile -DskipTests` for Maven, `./gradlew clean compileJava -x test` for Gradle)
+  4. EXECUTE — read from <source>, write to <target>. Follow the module instructions, adapting to the chosen strategy
+  5. COMPILE — run the compile command in <target> (`cd <target> && ./mvnw clean compile -DskipTests` for Maven, `cd <target> && ./gradlew clean compileJava -x test` for Gradle)
      Fails → load [modules/compile-fix.md](modules/compile-fix.md) and follow the retry procedure.
              If compile-fix reports MANUAL_REVIEW_REQUIRED (unresolved errors after 3 retries),
              ask the user whether to continue with the next module or stop the migration.
@@ -125,22 +135,22 @@ To run a single module outside the full migration flow, read all the files in th
 - "Run only the frontend module"
 - "Re-run the cleanup module"
 
-The module will use the current project state and the chosen strategy (if already decided). If no strategy has been chosen, the module will ask.
+The module will use the current `<source>` and `<target>` paths and the chosen strategy (if already decided). If no strategy has been chosen, the module will ask.
 
-## Step 4: Verify the Migration
+## Step 3: Verify the Migration
 
-Run each check in order. A check fails = stop and fix before continuing.
+All verification checks run against `<target>`. Run each check in order. A check fails = stop and fix before continuing.
 
-| # | Check | Command (Maven / Gradle) | Pass criteria |
+| # | Check | Command (run in `<target>`) | Pass criteria |
 |---|-------|---------|---------------|
-| 1 | **Builds** | `./mvnw clean package -DskipTests` / `./gradlew clean build -x test` | Exit code 0, no compilation errors |
-| 2 | **No Spring deps** | Search build file for `org.springframework` | Zero Spring deps (except Spring compat extensions if using that strategy) |
-| 3 | **Has Quarkus** | Search build file for `io.quarkus` | Quarkus BOM and at least one extension present |
-| 4 | **Tests pass** | `./mvnw test` / `./gradlew test` | All tests pass using `@QuarkusTest` |
-| 5 | **Starts up** | `./mvnw quarkus:dev` / `./gradlew quarkusDev` | App starts, `curl http://localhost:8080/q/health` returns UP |
-| 6 | **No leftover templates** | Search for Thymeleaf/JSP references | None remaining (unless intentionally kept) |
+| 1 | **Builds** | `cd <target> && ./mvnw clean package -DskipTests` / `cd <target> && ./gradlew clean build -x test` | Exit code 0, no compilation errors |
+| 2 | **No Spring deps** | Search `<target>` build file for `org.springframework` | Zero Spring deps (except Spring compat extensions if using that strategy) |
+| 3 | **Has Quarkus** | Search `<target>` build file for `io.quarkus` | Quarkus BOM and at least one extension present |
+| 4 | **Tests pass** | `cd <target> && ./mvnw test` / `cd <target> && ./gradlew test` | All tests pass using `@QuarkusTest` |
+| 5 | **Starts up** | `cd <target> && ./mvnw quarkus:dev` / `cd <target> && ./gradlew quarkusDev` | App starts, `curl http://localhost:8080/q/health` returns UP |
+| 6 | **No leftover templates** | Search `<target>` for Thymeleaf/JSP references | None remaining (unless intentionally kept) |
 
-## Step 5: Migration Review (Self-Reflection)
+## Step 4: Migration Review (Self-Reflection)
 
 Answer each question honestly:
 
@@ -148,7 +158,7 @@ Answer each question honestly:
 2. **What required manual judgment?** Non-obvious decisions made.
 3. **What was left as TODO?** Every `// TODO: Migration required` comment and why.
 4. **Was any code removed?** What, where, justification. Flag runtime risks.
-5. **What checks failed initially?** Failures from Step 4 and how you fixed them.
+5. **What checks failed initially?** Failures from Step 3 and how you fixed them.
 6. **What's missing from the skill references?** Mappings you had to figure out.
 
 ### Migration Report
@@ -159,6 +169,8 @@ Present the review as a structured report:
 ## Migration Report: [app-name]
 
 ### Summary
+- Source: [source directory path]
+- Target: [target directory path]
 - Strategy: [Full Migration / Spring Compatibility]
 - Agent: [AI agent name - e.g claude, pi, opencode, gemini, etc]
 - Model: [model name — e.g. claude-sonnet-4-6, check system context]
@@ -197,6 +209,3 @@ Present the review as a structured report:
 - [Any missing mappings, unclear instructions, or edge cases discovered]
 ```
 
-## Step 6: Commit and PR (only if git workflow was accepted)
-
-Follow [modules/git/git.md](modules/git/git.md) — **Post-migration** section. Ask the user for confirmation before committing, and again before pushing / creating the draft PR. Do not proceed with either action without explicit user approval.

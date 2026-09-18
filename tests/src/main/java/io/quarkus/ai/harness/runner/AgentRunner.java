@@ -8,10 +8,10 @@ import java.util.Map;
 
 public interface AgentRunner {
 
-    RunOutput run(Path projectDir, Path outputDir, String runName) throws IOException, InterruptedException;
+    RunOutput run(Path sourceDir, Path targetDir, Path outputDir, String runName) throws IOException, InterruptedException;
     UsageStats extractUsage(List<String> sessionFiles);
 
-    ReviewOutput review(String sessionFile, Path projectDir, Path outputDir,
+    ReviewOutput review(String sessionFile, Path targetDir, Path outputDir,
                         String runName, Path skillPath,
                         Map<String, Boolean> checkResults) throws IOException, InterruptedException;
 
