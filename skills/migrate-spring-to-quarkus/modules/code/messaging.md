@@ -57,8 +57,7 @@ These are three distinct connectors with different semantics — do not treat th
 | Spring JMS / ActiveMQ / Artemis | `quarkus-artemis-jms` + `smallrye-reactive-messaging-jms`¹ | `smallrye-jms` |
 
 ¹ `quarkus-artemis-jms` is a Quarkiverse extension (not in the Quarkus platform); add it
-explicitly. `smallrye-reactive-messaging-jms` is in the Quarkus 3.15.1 BOM — no version
-needed.
+explicitly. `smallrye-reactive-messaging-jms` is in the Quarkus BOM — no version needed.
 
 **RabbitMQ vs AMQP 1.0:** `spring-boot-starter-amqp` uses RabbitMQ (AMQP 0-9-1) — map
 to `quarkus-messaging-rabbitmq` / `smallrye-rabbitmq`. The `quarkus-messaging-amqp` /
