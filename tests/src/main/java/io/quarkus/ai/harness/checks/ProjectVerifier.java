@@ -34,8 +34,8 @@ public class ProjectVerifier {
 
     private static final int PORT_RANGE_START = 8080;
     private static final int PORT_RANGE_END = 8180;
-    private static final int ENDPOINT_MAX_RETRIES = 5;
-    private static final int ENDPOINT_RETRY_DELAY_MS = 2000;
+    private int endpointMaxRetries = CheckConfig.DEFAULT_RETRIES;
+    private int endpointRetryDelayMs = CheckConfig.DEFAULT_RETRY_DELAY_MS;
 
     private int findFreePort() {
         for (int port = PORT_RANGE_START; port <= PORT_RANGE_END; port++) {
@@ -115,11 +115,14 @@ public class ProjectVerifier {
     /**
      * Start the app, hit each endpoint defined in project.yaml, and verify responses.
      */
-    public boolean smokeTest(List<EndpointCheck> endpoints) {
+    public boolean smokeTest(CheckConfig config) {
+        List<EndpointCheck> endpoints = config.endpoints();
         if (endpoints == null || endpoints.isEmpty()) {
-            System.out.println("      no endpoints defined — skipping");
+            System.out.println("      no endpoints defined -- skipping");
             return true;
         }
+        endpointMaxRetries = config.effectiveRetries();
+        endpointRetryDelayMs = config.effectiveRetryDelayMs();
 
         Path startupLog = projectDir.resolve(".startup.log");
         Process process = null;
@@ -199,7 +202,7 @@ public class ProjectVerifier {
             case "no-spring-deps" -> noSpringDeps();
             case "has-quarkus" -> hasQuarkus();
             case "starts-up" -> startsUp();
-            case "smoke-test" -> smokeTest(checkConfig.endpoints());
+            case "smoke-test" -> smokeTest(checkConfig);
             case "no-thymeleaf" -> noThymeleaf();
             default -> throw new IllegalArgumentException("Unknown check: " + checkName);
         };
@@ -254,7 +257,7 @@ public class ProjectVerifier {
         String lastError = null;
         int attempt = 0;
 
-        for (attempt = 1; attempt <= ENDPOINT_MAX_RETRIES; attempt++) {
+        for (attempt = 1; attempt <= endpointMaxRetries; attempt++) {
             try {
                 HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                         .uri(URI.create(url))
@@ -274,7 +277,7 @@ public class ProjectVerifier {
                 HttpResponse<String> response = client.send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString());
                 int actual = response.statusCode();
 
-                if (actual == 404 && expected != 404 && attempt < ENDPOINT_MAX_RETRIES) {
+                if (actual == 404 && expected != 404 && attempt < endpointMaxRetries) {
                     // Transient 404: route not registered yet, retry
                     lastError = "404";
                 } else {
@@ -301,14 +304,14 @@ public class ProjectVerifier {
             } catch (IOException | InterruptedException e) {
                 // Transient transport error (refused, timeout, etc.), retry
                 lastError = e.getMessage();
-                if (attempt == ENDPOINT_MAX_RETRIES) break;
+                if (attempt == endpointMaxRetries) break;
             }
 
             // Common retry path for both transient 404 and transport errors
             System.out.printf("      RETRY %s %s -> %s (attempt %d/%d)%n",
-                    ep.effectiveMethod(), ep.path(), lastError, attempt, ENDPOINT_MAX_RETRIES);
+                    ep.effectiveMethod(), ep.path(), lastError, attempt, endpointMaxRetries);
             try {
-                Thread.sleep(ENDPOINT_RETRY_DELAY_MS);
+                Thread.sleep(endpointRetryDelayMs);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 break;
