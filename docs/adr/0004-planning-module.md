@@ -11,8 +11,7 @@ the `planning` module as one of the new modules and defined its responsibilities
 high level. [ADR-0003](https://github.com/quarkusio/skills/pull/81/) defined the full
 schema of `migration-spec.yaml`.
 
-This ADR specifies how the planning module collects user decisions, the two-file
-model governing `.quarkus-migration.yml` and `migration-spec.yaml`, the selective
+This ADR specifies how the planning module collects user decisions, the selective
 feature flag approach, and the gate dependency between planning and the prerequisite
 module.
 
@@ -34,7 +33,7 @@ mode. Strategy, Quarkus version, and Java version are resolved ad-hoc inline ins
   once. Downstream modules read the record rather than re-asking or re-inferring.
 - **Token efficiency.** A structured scan written at the start of the run avoids each
   module independently re-reading the source project to detect the same features.
-- **Traceability.** Every decision and its source (`argument | user | agent-selected`)
+- **Traceability.** Every decision and its source (`argument | user `)
   must be recoverable from the target directory after the run.
 
 ## Considered Options
@@ -71,11 +70,6 @@ fails (missing JDK, missing build tool), the migration is aborted before plannin
 ### `migration-spec.yaml`
 
 The planning module writes `migration-spec.yaml` into `<target>/migration-spec.yaml`.
-The resolution order for any decision is:
-**skill argument → ask user (interactive) / auto-select (non-interactive)**
-
-The resolved value is written into `migration-spec.yaml` with a `strategy_source` field
-recording where it came from (`argument | user | agent-selected`).
 
 **Downstream modules always read from `migration-spec.yaml` only.** There is always a
 single place to look for the current run's decisions, regardless of how they were
@@ -132,7 +126,7 @@ as new modules are added; each new module declares the flag(s) it depends on.
 
 The full `detected_features` schema (including flags written by the `discovery` module
 once that module is introduced) is defined in
-[ADR-0003](0003-file-schemas-for-new-migration-modules.md).
+[ADR-0003](https://github.com/quarkusio/skills/pull/81/).
 
 ### `migration-spec.yaml` as shared contract
 
@@ -144,13 +138,11 @@ The full schema is defined in ADR-0003. The planning module's specific contribut
 - `target_technology.*` — resolved Quarkus version, Java version, extensions list
 - `detected_features.*` — selective boolean flags from the planning scan (superseded
   by the `discovery` module's richer scan once that module is introduced)
-- `migration_strategy.*` — all user decisions with `strategy_source`
+- `migration_strategy.*` — all user decisions with 
 - `metadata.complexity` — `low` / `medium` / `high` based on component count
 - `metadata.generatedAt` — ISO-8601 timestamp
 - `decisions[]` — append-only log of every decision and its reason
 
-**Complexity estimate** — based on total component count (controllers + services +
-repositories + entities): `low` (< 10), `medium` (10–50), `high` (> 50).
 
 ### Changes to `SKILL.md`
 
