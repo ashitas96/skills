@@ -72,7 +72,8 @@ Present a summary table with area, findings, and complexity. Then choose the mig
 Resolve the strategy using the following priority (first match wins):
 
 1. **Skill argument** — if the skill was invoked with a `strategy` argument (`spring-compat` or `full-quarkus`), use it directly.
-2. **Project config file** — check for `.quarkus-migration.yml` in `<source>` root. If it exists and contains a `strategy` field, use that value. Example file:
+2. **Project config file** — check for `.quarkus-migration.yml` in `<source>` root. If it exists and contains a `strategy` field, use that value. 
+The file schema is defined in [ADR-0003](https://github.com/quarkusio/skills/issues/79) ([PR #81](https://github.com/quarkusio/skills/pull/81)). Example file:
    ```yaml
    # .quarkus-migration.yml
    strategy: spring-compat   # or full-quarkus
