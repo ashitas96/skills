@@ -88,19 +88,25 @@ skills/migrate-spring-to-quarkus/
 ├── SKILL.md                          # Main skill instructions (read by the AI agent)
 ├── README.md                         # This file (for humans)
 ├── modules/                          # Migration modules
-│   ├── jdk.md                        #   JDK version check
-│   ├── build.md                      #   Build file migration (dispatches to Maven or Gradle)
-│   ├── build-maven.md                #   Maven-specific: pom.xml, dependencies, plugins
-│   ├── build-gradle.md               #   Gradle-specific: build.gradle(.kts), plugins
-│   ├── code.md                       #   Java code: annotations, DI, REST, Data, Security
-│   ├── frontend.md                   #   Thymeleaf/JSP templates, static resources
-│   ├── testing.md                    #   Test migration: @SpringBootTest → @QuarkusTest
-│   ├── cleanup.md                    #   Remove leftover Spring artifacts
-│   └── git.md                        #   Git branch and PR workflow
+│   ├── jdk/
+│   │   └── jdk.md                    #   JDK version check
+│   ├── build/
+│   │   ├── build.md                  #   Build file migration (dispatches to Maven or Gradle)
+│   │   ├── maven.md                  #   Maven-specific: pom.xml, dependencies, plugins
+│   │   └── gradle.md                 #   Gradle-specific: build.gradle(.kts), plugins
+│   ├── code/
+│   │   └── code.md                   #   Java code: annotations, DI, REST, Data, Security
+│   ├── frontend/
+│   │   └── frontend.md               #   Thymeleaf/JSP templates, static resources
+│   ├── testing/
+│   │   └── testing.md                #   Test migration: @SpringBootTest -> @QuarkusTest
+│   ├── cleanup/
+│   │   └── cleanup.md                #   Remove leftover Spring artifacts
+│   └── compile-fix.md                #   Retry procedure for compilation errors
 └── references/                       # Mapping tables loaded during migration
-    ├── dependency-map.md             #   Spring → Quarkus dependency mapping
-    ├── annotation-map.md             #   Spring → Quarkus annotation mapping
-    └── config-map.md                 #   Spring → Quarkus config property mapping
+    ├── dependency-map.md             #   Spring -> Quarkus dependency mapping
+    ├── annotation-map.md             #   Spring -> Quarkus annotation mapping
+    └── config-map.md                 #   Spring -> Quarkus config property mapping
 ```
 
 ## Running Individual Modules

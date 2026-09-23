@@ -53,11 +53,16 @@ public class AgentSkillExecutor {
     public record ProjectEntry(ProjectConfig config, Path projectDir) {}
 
     /**
+     * Pairs the source and target directories for a two-directory migration.
+     */
+    public record WorkDirs(Path sourceDir, Path targetDir) {}
+
+    /**
      * The outcome of executing skills against a single project.
      */
     public record ExecutionResult(
             List<String> failures,
-            Path workDir,
+            Path targetDir,
             String score,
             boolean benchmark
     ) {}
@@ -199,16 +204,18 @@ public class AgentSkillExecutor {
                     System.out.println("-".repeat(60));
                 }
 
-                // 1. Prepare a fresh working directory
-                Path workDir = prepareWorkDir(config, projectDir);
-                lastWorkDir = workDir;
+                // 1. Prepare source and target working directories
+                WorkDirs workDirs = prepareWorkDirs(config, projectDir);
+                lastWorkDir = workDirs.targetDir();
 
-                System.out.println("  workdir:  " + workDir);
+                System.out.println("  source:   " + workDirs.sourceDir());
+                System.out.println("  target:   " + workDirs.targetDir());
                 System.out.println("  outputs:  " + outputDir.resolve(runName + ".*"));
 
                 MigrationResult result = new MigrationResult(aiCmd(),
                         config.name(), modelDisplay, aiStrategy(), skillRef);
-                result.setWorkDir(workDir.toString());
+                result.setSourceDir(workDirs.sourceDir().toString());
+                result.setTargetDir(workDirs.targetDir().toString());
                 result.setRunName(runName);
                 result.setPrompt(aiPrompt());
                 result.setUserProvider(aiProvider());
@@ -219,7 +226,7 @@ public class AgentSkillExecutor {
                 AgentRunner runner = RunnerRegistry.getRunner(aiCmd(), provider, model, skillPath, aiStrategy(), timeout, aiPrompt(), aiArgs(), aiSanitize());
 
                 System.out.printf("  Running migration agent: %s ...%n", aiCmd());
-                AgentRunner.RunOutput output = runner.run(workDir, outputDir, runName);
+                AgentRunner.RunOutput output = runner.run(workDirs.sourceDir(), workDirs.targetDir(), outputDir, runName);
 
                 result.setAiExitCode(output.exitCode());
                 result.setDuration(output.duration());
@@ -240,10 +247,10 @@ public class AgentSkillExecutor {
                 result.setCacheWrite(usage.cacheWrite());
                 result.setModelUsages(usage.modelUsages());
 
-                // 4. Run checks
+                // 4. Run checks against the target directory
                 List<String> failures = new ArrayList<>();
                 if (hasChecks) {
-                    failures.addAll(runChecks(config, workDir, Optional.of(result)));
+                    failures.addAll(runChecks(config, workDirs.targetDir(), Optional.of(result)));
                 } else {
                     System.out.println("  Skipping checks" + (!aiChecks() ? " (runChecks=false)" : " (none defined)"));
                 }
@@ -251,7 +258,7 @@ public class AgentSkillExecutor {
                 // 5. Run skill review (separate ai session)
                 if (aiReview() && hasChecks && !output.sessionFiles().isEmpty()) {
                     AgentRunner.ReviewOutput reviewOutput = runner.review(
-                            output.sessionFiles().getFirst(), workDir, outputDir, runName, skillPath, result.getChecks());
+                            output.sessionFiles().getFirst(), workDirs.targetDir(), outputDir, runName, skillPath, result.getChecks());
                     result.setReview(reviewOutput.review());
                     result.setReviewTokens(reviewOutput.usage().totalTokens());
                     result.setReviewCost(reviewOutput.usage().totalCost());
@@ -339,23 +346,29 @@ public class AgentSkillExecutor {
         return name.contains("migrate");
     }
 
-    private Path prepareWorkDir(ProjectConfig config, Path projectDir) throws IOException, InterruptedException {
+    private WorkDirs prepareWorkDirs(ProjectConfig config, Path projectDir) throws IOException, InterruptedException {
         Path workdirsBase = Path.of("").toAbsolutePath().resolve("target").resolve("workdirs");
-        Path workDir = workdirsBase.resolve(config.name());
-        if (Files.exists(workDir)) {
-            try (var walk = Files.walk(workDir)) {
-                walk.sorted(Comparator.reverseOrder())
-                        .forEach(p -> { try { Files.delete(p); } catch (IOException ignored) {} });
+        Path sourceDir = workdirsBase.resolve(config.name());
+        Path targetDir = workdirsBase.resolve(config.name() + "-quarkus");
+
+        for (Path dir : List.of(sourceDir, targetDir)) {
+            if (Files.exists(dir)) {
+                try (var walk = Files.walk(dir)) {
+                    walk.sorted(Comparator.reverseOrder())
+                            .forEach(p -> { try { Files.delete(p); } catch (IOException ignored) {} });
+                }
             }
         }
-        Files.createDirectories(workDir);
+
+        Files.createDirectories(sourceDir);
+        Files.createDirectories(targetDir);
 
         if (config.isLocal()) {
             Path source = projectDir.resolve("source");
             if (!Files.isDirectory(source)) {
                 throw new IOException("Local source directory not found: " + source);
             }
-            copyDirectory(source, workDir);
+            copyDirectory(source, sourceDir);
         } else {
             List<String> cmd = new ArrayList<>(List.of(
                     "git", "clone", "--depth", "1"));
@@ -363,7 +376,7 @@ public class AgentSkillExecutor {
                 cmd.addAll(List.of("--branch", config.ref()));
             }
             cmd.add(config.source());
-            cmd.add(workDir.toString());
+            cmd.add(sourceDir.toString());
 
             Process p = new ProcessBuilder(cmd)
                     .redirectErrorStream(true)
@@ -375,7 +388,7 @@ public class AgentSkillExecutor {
             }
         }
 
-        return workDir;
+        return new WorkDirs(sourceDir, targetDir);
     }
 
     private static void copyDirectory(Path source, Path target) throws IOException {

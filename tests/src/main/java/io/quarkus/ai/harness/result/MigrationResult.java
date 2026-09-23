@@ -31,7 +31,8 @@ public class MigrationResult {
     private long cacheRead;
     private long cacheWrite;
     private List<String> sessionFiles;
-    private String workDir;
+    private String sourceDir;
+    private String targetDir;
     private String runName;
     private int aiExitCode;
     private String review;
@@ -118,8 +119,11 @@ public class MigrationResult {
     public List<String> getSessionFiles() { return sessionFiles; }
     public void setSessionFiles(List<String> sessionFiles) { this.sessionFiles = sessionFiles; }
 
-    public String getWorkDir() { return workDir; }
-    public void setWorkDir(String workDir) { this.workDir = workDir; }
+    public String getSourceDir() { return sourceDir; }
+    public void setSourceDir(String sourceDir) { this.sourceDir = sourceDir; }
+
+    public String getTargetDir() { return targetDir; }
+    public void setTargetDir(String targetDir) { this.targetDir = targetDir; }
 
     public String getRunName() { return runName; }
     public void setRunName(String runName) { this.runName = runName; }
@@ -181,7 +185,8 @@ public class MigrationResult {
         sb.append("  tools:    %d\n".formatted(toolCalls));
         sb.append("  checks:\n");
         checks.forEach((k, v) -> sb.append("    %s %s\n".formatted(v ? "✅" : "❌", k)));
-        sb.append("  workdir:  %s\n".formatted(workDir));
+        sb.append("  source:   %s\n".formatted(sourceDir));
+        sb.append("  target:   %s\n".formatted(targetDir));
         return sb.toString();
     }
 }

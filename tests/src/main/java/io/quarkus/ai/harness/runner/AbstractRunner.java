@@ -97,16 +97,20 @@ public abstract class AbstractRunner {
         }
     }
 
-    protected String generateMigrationPrompt() {
+    protected String generateMigrationPrompt(Path sourceDir, Path targetDir) {
         return """
-                Migrate this Spring Boot project to Quarkus using the %s migration strategy. \\
-                Work entirely within this directory. \\
-                Do a full migration — convert all source files, build files, config, and tests. \\
-                After migration, verify the project compiles with ./mvnw compile and fix any errors. \\
-                Then run ./mvnw test and fix any test failures.
+                Migrate this Spring Boot project to Quarkus using the %s migration strategy.
+                Source project (read-only): %s
+                Target project (write here): %s
+                Read from the source directory and write all migrated files to the target directory. \
+                Do not modify the source directory. \
+                Do a full migration -- convert all source files, build files, config, and tests. \
+                After migration, verify the project compiles with cd %3$s && ./mvnw compile and fix any errors. \
+                Then run cd %3$s && ./mvnw test and fix any test failures.
                 If you need to delete code or files, explain why you are deleting them and what you are replacing them with.
                 If anything could not be converted/migrated explain why - do not just delete/remove it without explaining.
-                Include a summary of the migration in the end of the output.""".formatted(strategy);
+                Include a summary of the migration in the end of the output.""".formatted(
+                strategy, sourceDir, targetDir);
     }
 
     /**

@@ -2,9 +2,21 @@
 
 Migrate the build descriptor and configuration files from Spring Boot to Quarkus.
 
+This is the first module to run. It creates `<target>` and populates it with the source project files before transforming the build configuration.
+
 ## Instructions
 
-- Detect the build tool by checking which files exist at the project root:
+### Create the target project
+
+Before any transformation, copy the entire source project into the target directory:
+
+1. Create `<target>` if it does not exist.
+2. Copy all files from `<source>` into `<target>`, preserving the directory structure. This includes `src/`, resources, build files, wrapper scripts, and any other project files.
+3. From this point on, all modifications happen in `<target>`. Do not modify `<source>`.
+
+### Detect and migrate the build system
+
+- Detect the build tool by checking which files exist at `<source>`:
 
 | File | Build tool | Sub-module |
 |---|---|---|
@@ -12,12 +24,12 @@ Migrate the build descriptor and configuration files from Spring Boot to Quarkus
 | `build.gradle` or `build.gradle.kts` | Gradle | [gradle.md](gradle.md) |
 
 - Load [references/dependency-map.md](../../references/dependency-map.md) and [references/config-map.md](../../references/config-map.md) before starting.
-- Then load and execute the matching submodule above.
+- Then load and execute the matching submodule above. All build file modifications happen in `<target>`.
 - After the submodule completes, return here and continue with the Configuration Migration and Watch Out sections below.
 
 ## Configuration Migration
 
-Rename Spring properties to Quarkus equivalents using config-map.md. Key mappings:
+Rename Spring properties to Quarkus equivalents in `<target>` using config-map.md. Key mappings:
 
 - `spring.datasource.*` → `%prod.quarkus.datasource.*` (see below)
 - `spring.jpa.*` → `quarkus.hibernate-orm.*`

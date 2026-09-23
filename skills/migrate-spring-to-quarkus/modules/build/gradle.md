@@ -3,6 +3,8 @@
 Gradle-specific build migration steps. Called from [build.md](build.md).
 Covers both Groovy DSL (`build.gradle`) and Kotlin DSL (`build.gradle.kts`).
 
+All modifications below apply to the build file in `<target>` (already copied from source by the build module).
+
 Detect which DSL the project uses by the file extension. Use the matching syntax in all examples shown to the user. Do not mix DSLs.
 
 ## What to do
@@ -14,7 +16,7 @@ Detect which DSL the project uses by the file extension. Use the matching syntax
 - [ ] Configure test task (JBoss LogManager)
 - [ ] Replace Spring starters with Quarkus equivalents (use dependency-map.md)
 - [ ] Remove unused Spring-only dependencies (`spring-boot-devtools`, etc.)
-- [ ] Compile: `./gradlew clean compileJava -x test`
+- [ ] Compile: `cd <target> && ./gradlew clean compileJava -x test`
 
 ## Plugin Block
 

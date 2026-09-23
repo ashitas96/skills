@@ -2,17 +2,19 @@
 
 Migrate test infrastructure from Spring Boot Test to Quarkus Test.
 
-Load [references/annotation-map.md](../../references/annotation-map.md) — see the Testing section for full mapping.
+All files to transform are in `<target>` (already copied there by the build module). Do not modify `<source>`.
+
+Load [references/annotation-map.md](../../references/annotation-map.md) -- see the Testing section for full mapping.
 
 ## What to do
 
-- [ ] Replace `@SpringBootTest` with `@QuarkusTest`
+- [ ] Replace `@SpringBootTest` with `@QuarkusTest` in `<target>/src/test/`
 - [ ] Replace `@MockBean` with `@InjectMock` (`io.quarkus.test.InjectMock`)
 - [ ] Replace `TestRestTemplate` with REST Assured
 - [ ] Replace `@ActiveProfiles("test")` with `@TestProfile`
 - [ ] Replace `@LocalServerPort` with `@TestHTTPResource`
-- [ ] Update test properties (use `%test.` prefix in `application.properties`)
-- [ ] Run tests: `./mvnw test` (Maven) or `./gradlew test` (Gradle)
+- [ ] Update test properties (use `%test.` prefix in `<target>/src/main/resources/application.properties`)
+- [ ] Run tests: `cd <target> && ./mvnw test` (Maven) or `cd <target> && ./gradlew test` (Gradle)
 
 ## Key Conversions
 

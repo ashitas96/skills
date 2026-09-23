@@ -2,14 +2,16 @@
 
 Migrate templates, static assets, and view-related code from Spring MVC + Thymeleaf to Quarkus + Qute.
 
+All files to transform are in `<target>` (already copied there by the build module). Do not modify `<source>`.
+
 ## What to do
 
-- [ ] Ensure `quarkus-rest-qute` dependency is in the build file
-- [ ] Convert Thymeleaf templates to Qute syntax
-- [ ] Move static resources from `static/` to `META-INF/resources/`
-- [ ] Remove Spring CSRF tokens from HTML and JavaScript
+- [ ] Ensure `quarkus-rest-qute` dependency is in `<target>` build file
+- [ ] Convert Thymeleaf templates to Qute syntax in `<target>`
+- [ ] Move static resources from `<target>/src/main/resources/static/` to `<target>/src/main/resources/META-INF/resources/`
+- [ ] Remove Spring CSRF tokens from HTML and JavaScript in `<target>`
 - [ ] Rename template directories to match `@CheckedTemplate` class names
-- [ ] Compile: `./mvnw clean compile -DskipTests` (Maven) or `./gradlew clean compileJava -x test` (Gradle)
+- [ ] Compile: `cd <target> && ./mvnw clean compile -DskipTests` (Maven) or `cd <target> && ./gradlew clean compileJava -x test` (Gradle)
 
 ## Dependency
 

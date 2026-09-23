@@ -81,7 +81,7 @@ public static List<Todo> findByCompleted(boolean completed) {
 
 ## Report
 
-When the procedure finishes (whether all errors were fixed or not), write `migration-reports/compile-fix-report.json`:
+When the procedure finishes (whether all errors were fixed or not), write `<target>/migration-reports/compile-fix-report.json`:
 
 ```json
 {

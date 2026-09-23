@@ -2,6 +2,8 @@
 
 Maven-specific build migration steps. Called from [build.md](build.md).
 
+All modifications below apply to `<target>/pom.xml` (already copied from source by the build module).
+
 ## What to do
 
 - [ ] Replace Spring Boot parent with Quarkus BOM
@@ -10,7 +12,7 @@ Maven-specific build migration steps. Called from [build.md](build.md).
 - [ ] Add `native` profile
 - [ ] Replace Spring starters with Quarkus equivalents (use dependency-map.md)
 - [ ] Remove unused Spring-only dependencies (`spring-boot-devtools`, etc.)
-- [ ] Compile: `./mvnw clean compile -DskipTests`
+- [ ] Compile: `cd <target> && ./mvnw clean compile -DskipTests`
 
 ## pom.xml Reference Snippets
 

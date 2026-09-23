@@ -27,10 +27,10 @@ public class ClaudeRunner extends AbstractRunner implements AgentRunner {
     }
 
     @Override
-    public RunOutput run(Path projectDir, Path outputDir, String runName) throws IOException, InterruptedException {
+    public RunOutput run(Path sourceDir, Path targetDir, Path outputDir, String runName) throws IOException, InterruptedException {
         Files.createDirectories(outputDir);
 
-        String userPrompt = buildClaudePrompt();
+        String userPrompt = buildClaudePrompt(sourceDir, targetDir);
 
         List<String> cmd = new ArrayList<>();
         cmd.add(aiCmd);
@@ -40,7 +40,10 @@ public class ClaudeRunner extends AbstractRunner implements AgentRunner {
         cmd.add("--verbose");
         cmd.add("--dangerously-skip-permissions");
 
-        System.out.println("  ai cwd:     " + projectDir);
+        Path workingDir = sourceDir.getParent();
+        System.out.println("  ai cwd:     " + workingDir);
+        System.out.println("  source:     " + sourceDir);
+        System.out.println("  target:     " + targetDir);
         System.out.println("  output dir: " + outputDir);
         System.out.println("  run name:   " + runName);
         System.out.println("  ai cmd:   " + cmd);
@@ -50,7 +53,7 @@ public class ClaudeRunner extends AbstractRunner implements AgentRunner {
         Path prettyFile = outputDir.resolve(runName + ".pretty.md");
 
         ProcessBuilder pb = new ProcessBuilder(cmd)
-                .directory(projectDir.toFile())
+                .directory(workingDir.toFile())
                 .redirectInput(ProcessBuilder.Redirect.from(Path.of("/dev/null").toFile()))
                 .redirectErrorStream(true);
 
@@ -118,7 +121,7 @@ public class ClaudeRunner extends AbstractRunner implements AgentRunner {
         }
     }
 
-    private String buildClaudePrompt() throws IOException {
+    private String buildClaudePrompt(Path sourceDir, Path targetDir) throws IOException {
         var parts = new ArrayList<String>();
 
         // Claude has no --skill flag; skill content must always be embedded in the prompt
@@ -129,7 +132,7 @@ public class ClaudeRunner extends AbstractRunner implements AgentRunner {
             parts.add("<skill-instructions>\n" + skillContent + "\n</skill-instructions>");
         }
 
-        String instruction = prompt.isEmpty() ? generateMigrationPrompt() : prompt;
+        String instruction = prompt.isEmpty() ? generateMigrationPrompt(sourceDir, targetDir) : prompt;
         parts.add(instruction);
         return String.join("\n\n", parts);
     }
@@ -383,7 +386,7 @@ public class ClaudeRunner extends AbstractRunner implements AgentRunner {
     }
 
     @Override
-    public ReviewOutput review(String sessionFile, Path projectDir, Path outputDir,
+    public ReviewOutput review(String sessionFile, Path targetDir, Path outputDir,
             String runName, Path skillPath,
             Map<String, Boolean> checkResults) throws IOException, InterruptedException {
         if (sessionId == null || sessionId.isBlank()) {
@@ -425,7 +428,7 @@ public class ClaudeRunner extends AbstractRunner implements AgentRunner {
         System.out.println("  ── Skill Review ──────────────────────────────────────────────────────");
 
         ProcessBuilder pb = new ProcessBuilder(cmd)
-                .directory(projectDir.toFile())
+                .directory(targetDir.toFile())
                 .redirectInput(ProcessBuilder.Redirect.from(Path.of("/dev/null").toFile()))
                 .redirectErrorStream(true);
 

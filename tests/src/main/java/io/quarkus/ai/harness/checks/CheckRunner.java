@@ -10,8 +10,8 @@ import java.util.Optional;
 
 /**
  * CLI entry point for running project verification checks independently of
- * the AI agent. Expects a prior agent run to have produced a work directory
- * under {@code target/workdirs/<project-name>}.
+ * the AI agent. Expects a prior agent run to have produced a target directory
+ * under {@code target/workdirs/<project-name>-quarkus}.
  *
  * <p>Usage:
  * <pre>
@@ -35,15 +35,15 @@ public class CheckRunner {
 
         for (ProjectEntry entry : projects) {
             String name = entry.config().name();
-            Path workDir = workdirsBase.resolve(name);
+            Path targetDir = workdirsBase.resolve(name + "-quarkus");
 
             System.out.println("\n" + "=".repeat(60));
             System.out.println("PROJECT: " + name);
-            System.out.println("  workdir: " + workDir);
+            System.out.println("  target: " + targetDir);
             System.out.println("=".repeat(60));
 
-            if (!Files.isDirectory(workDir)) {
-                System.err.println("  Work directory not found — run the agent first.");
+            if (!Files.isDirectory(targetDir)) {
+                System.err.println("  Target directory not found — run the agent first.");
                 anyFailure = true;
                 continue;
             }
@@ -54,7 +54,7 @@ public class CheckRunner {
                 continue;
             }
 
-            List<String> failures = AgentSkillExecutor.runChecks(entry.config(), workDir, Optional.empty());
+            List<String> failures = AgentSkillExecutor.runChecks(entry.config(), targetDir, Optional.empty());
             if (!failures.isEmpty()) {
                 System.err.println("  FAILED checks: " + failures);
                 anyFailure = true;

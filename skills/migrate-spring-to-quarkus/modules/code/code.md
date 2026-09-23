@@ -2,6 +2,8 @@
 
 Migrate all Java source code from Spring patterns to Quarkus equivalents.
 
+All files to transform are in `<target>` (already copied there by the build module). Do not modify `<source>`.
+
 Load [references/annotation-map.md](../../references/annotation-map.md) before starting. It contains the complete annotation mapping tables for DI, REST, Data, Security, Cache, Scheduling, and Lifecycle.
 
 ## What to do
@@ -14,7 +16,7 @@ Load [references/annotation-map.md](../../references/annotation-map.md) before s
 - [ ] Migrate `Model.addAttribute()` → Qute `Template.data()` or `@CheckedTemplate`
 - [ ] Migrate `return "redirect:..."` → `Response.seeOther()`
 - [ ] Remove `@SpringBootApplication` main class
-- [ ] Compile: `./mvnw clean compile -DskipTests` (Maven) or `./gradlew clean compileJava -x test` (Gradle)
+- [ ] Compile: `cd <target> && ./mvnw clean compile -DskipTests` (Maven) or `cd <target> && ./gradlew clean compileJava -x test` (Gradle)
 
 Use the annotation-map.md reference for the full mapping. Below are the key patterns with before/after examples.
 
@@ -155,7 +157,7 @@ public class TodoResource {
 
 ## Main Class Removal
 
-If the main class **only** contains `SpringApplication.run(...)`, delete it — Quarkus auto-generates a main class.
+If the main class in `<target>` **only** contains `SpringApplication.run(...)`, delete it from `<target>` -- Quarkus auto-generates a main class. Do not modify `<source>`.
 
 If it contains additional logic, migrate before deleting:
 
