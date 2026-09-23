@@ -34,7 +34,7 @@ mode. Strategy, Quarkus version, and Java version are resolved ad-hoc inline ins
   once. Downstream modules read the record rather than re-asking or re-inferring.
 - **Token efficiency.** A structured scan written at the start of the run avoids each
   module independently re-reading the source project to detect the same features.
-- **Traceability.** Every decision and its source (`argument | config-file | user`)
+- **Traceability.** Every decision and its source (`argument | user | agent-selected`)
   must be recoverable from the target directory after the run.
 
 ## Considered Options
@@ -68,27 +68,18 @@ checks pass, and writes `migration-spec.yaml` into `<target>/migration-spec.yaml
 **ALWAYS** — provided the `prerequisite` module has passed. If any hard prerequisite
 fails (missing JDK, missing build tool), the migration is aborted before planning runs.
 
-### Two-file model: `.quarkus-migration.yml` and `migration-spec.yaml`
+### `migration-spec.yaml`
 
-These two files serve different purposes. The overlap between them is intentional:
-
-| | `.quarkus-migration.yml` | `migration-spec.yaml` |
-|---|---|---|
-| Written by | The user, manually, before the run | The planning module, automatically |
-| When | Before the migration starts | During the planning phase |
-| Where | Source project root | Target directory (`<target>/migration-spec.yaml`) |
-| Purpose | Pre-declare choices to skip interactive questions | Full record of everything detected and decided |
-| Lifecycle | Unchanged across runs | Regenerated each run |
-
+The planning module writes `migration-spec.yaml` into `<target>/migration-spec.yaml`.
 The resolution order for any decision is:
-**skill argument → `.quarkus-migration.yml` → ask user (interactive) / auto-select (non-interactive)**
+**skill argument → ask user (interactive) / auto-select (non-interactive)**
 
 The resolved value is written into `migration-spec.yaml` with a `strategy_source` field
-recording where it came from (`argument | config-file | user | agent-selected`).
+recording where it came from (`argument | user | agent-selected`).
 
-**Downstream modules always read from `migration-spec.yaml` only.** No module reads
-`.quarkus-migration.yml` directly. There is always a single place to look for the
-current run's decisions, regardless of how they were originally provided.
+**Downstream modules always read from `migration-spec.yaml` only.** There is always a
+single place to look for the current run's decisions, regardless of how they were
+originally provided.
 
 ### User decisions
 
