@@ -6,14 +6,14 @@
 
 ## Context and Problem Statement
 
-[ADR-0002](https://github.com/quarkusio/skills/pull/77/) introduced
-the `planning` module as one of the new modules and defined its responsibilities at a
-high level. [ADR-0003](https://github.com/quarkusio/skills/pull/81/) defined the full
-schema of `migration-spec.yaml`.
+As proposed in [ADR-0002](https://github.com/quarkusio/skills/pull/77/) (not yet merged),
+the `planning` module is one of the new modules with its responsibilities defined at a
+high level. As proposed in [ADR-0003](https://github.com/quarkusio/skills/pull/81/) (not yet merged),
+the full schema of `migration-spec.yaml` is defined there.
 
 This ADR specifies how the planning module collects user decisions, the selective
 feature flag approach, and the gate dependency between planning and the prerequisite
-module.
+module (to be introduced in #55).
 
 The `migrate-spring-to-quarkus` skill currently has no module that captures critical
 features requiring frequent lookup and user transformation preferences in interactive
@@ -84,10 +84,22 @@ without asking; all chosen values and their rationale are still written to
 
 **Stage 1 — always collect:**
 
+### Decision resolution chain
+
+Decisions are resolved in priority order:
+
+> **`argument` → `.quarkus-migration.yml` → interactive prompt**
+
+- **`argument`**: a value passed directly as a skill invocation argument takes highest priority.
+- **`.quarkus-migration.yml`**: a pre-existing config file in the source directory is read next.
+- **interactive prompt**: the user is asked only if neither of the above provides a value.
+
+In non-interactive mode the interactive prompt step is skipped and the non-interactive default is used instead. All resolved values and their source are written to `decisions[]` in `migration-spec.yaml`.
+
 | # | Decision | Interactive | Non-interactive default |
 |---|---|---|---|
-| 1 | Target Quarkus version | Ask: latest stable (resolved via Maven Central) or specify | Latest stable |
-| 2 | Target Java version | Ask: 17 (LTS) or 21 (LTS, virtual threads) | 17 |
+| 1 | Target Quarkus version | Ask: latest stable (resolved via the [code.quarkus.io](https://code.quarkus.io) API) or specify | Latest stable |
+| 2 | Target Java version | Ask: 17 (LTS) or 21 (LTS, virtual threads) — options filtered by resolved Quarkus version (3.x requires JDK 17+, 4.x requires JDK 21+) | 17 (or 21 if Quarkus 4.x) |
 | 3 | Migration strategy | Ask: `full-quarkus` or `spring-compat` | `full-quarkus` |
 
 > Non-interactive defaults for Java version, Quarkus version, and strategy are
@@ -138,7 +150,7 @@ The full schema is defined in ADR-0003. The planning module's specific contribut
 - `target_technology.*` — resolved Quarkus version, Java version, extensions list
 - `detected_features.*` — selective boolean flags from the planning scan (superseded
   by the `discovery` module's richer scan once that module is introduced)
-- `migration_strategy.*` — all user decisions with 
+- `migration_strategy.*` — all user decisions with `source` field set to `argument | user | default`
 - `metadata.complexity` — `low` / `medium` / `high` based on component count
 - `metadata.generatedAt` — ISO-8601 timestamp
 - `decisions[]` — append-only log of every decision and its reason
@@ -153,16 +165,18 @@ The full schema is defined in ADR-0003. The planning module's specific contribut
   `prerequisite` and before all transformation modules.
 - The Execution Protocol `FOR module IN [...]` list is updated accordingly.
 
-### How downstream modules use `migration-spec.yaml`
+### Planned `migration-spec.yaml` consumers
 
-| Module | What it reads |
-|---|---|
-| `modules/build/` | `quarkus_version`, `java_version` — writes to `pom.xml` / `build.gradle` |
-| `modules/code/code.md` | `migration_mode`, `persistence` — branches between strategies |
-| `modules/frontend/frontend.md` | `view_layer` — chooses Qute vs. MyFaces path |
-| Prerequisite module (#55) | `target_technology.java_version` — validates JDK minimum |
-| Discovery module (#55) | Writes richer `detected_features` flags into the spec |
-| Reporting module (#59) | `decisions[]`, `complexity`, feature flags — final report |
+The table below documents the intended contract between the planning module and each consumer. Existing modules do not yet read from `migration-spec.yaml` — that integration is part of this change. Planned modules do not exist yet.
+
+| Module | Fields consumed | Module status |
+|---|---|---|
+| `modules/build/` | `target_technology.quarkus_version`, `target_technology.java_version` — writes to `pom.xml` / `build.gradle` | Module Existing (integration pending) |
+| `modules/code/code.md` | `migration_strategy.migration_mode`, `migration_strategy.persistence` — branches between strategies | Module Existing (integration pending) |
+| `modules/frontend/frontend.md` | `migration_strategy.view_layer` — chooses Qute vs. MyFaces path | Module Existing (integration pending) |
+| Prerequisite module (#55) | `target_technology.java_version` — validates JDK minimum | Module Planned |
+| Discovery module (#55) | Writes richer `detected_features` flags into the spec | Module Planned |
+| Reporting module (#59) | `decisions[]`, `metadata.complexity`, feature flags — final report | Module Planned |
 
 ## Consequences
 
@@ -172,8 +186,10 @@ The full schema is defined in ADR-0003. The planning module's specific contribut
   re-scanning. Reduces both token consumption and non-determinism.
 - The target directory contains a complete, human-readable record of every migration
   run.
-- New modules can be added without touching `SKILL.md` — they declare the
+- New modules can be added without touching `SKILL.md`'s decision logic — they declare the
   `detected_features` flags they depend on and read their decisions from the spec.
+  Note: the Execution Protocol's hardcoded module list (`FOR module IN [...]`) in `SKILL.md`
+  still requires a manual update until that list is made dynamic.
 - The planning module's scan is a stepping stone: once `discovery` (#55) is
   introduced, its richer structured output replaces the planning-time scan, and
   planning becomes purely a decision-collection and spec-writing module.
