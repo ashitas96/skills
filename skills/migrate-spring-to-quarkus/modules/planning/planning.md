@@ -84,10 +84,12 @@ Decisions are collected in two stages.
 
 Ask Stage 1 questions first (in interactive mode), or apply defaults:
 
+Both Quarkus version and Java version are resolved at runtime by calling the [`code.quarkus.io/api/streams`](https://code.quarkus.io/api/streams) API (see [#71](https://github.com/quarkusio/skills/issues/71)), which returns available Quarkus streams with their minimum JDK version.
+
 | # | Decision | Interactive Option / Prompt | Non-interactive default |
 |---|---|---|---|
-| 1 | Target Quarkus version | Ask: latest stable (resolved via the [code.quarkus.io](https://code.quarkus.io) API) or specify | Latest stable release |
-| 2 | Target Java version | Ask: 17 (LTS) or 21 (LTS, virtual threads) — options filtered by resolved Quarkus version (3.x requires JDK 17+, 4.x requires JDK 21+) | 17 (or 21 if Quarkus 4.x) |
+| 1 | Target Quarkus version | Ask: offer API-resolved latest stable or let user specify | Resolved from `code.quarkus.io/api/streams` |
+| 2 | Target Java version | Ask: offer minimum JDK required by the resolved Quarkus version or let user specify | Minimum JDK required by the resolved Quarkus version (today: JDK 17 for Quarkus 3.x, JDK 21 for Quarkus 4.x) |
 | 3 | Migration strategy | Ask: `full-quarkus` (idiomatic JAX-RS/CDI/Panache) or `spring-compat` (Quarkus Spring compatibility extensions) | `full-quarkus` |
 
 > *In interactive mode, stop and wait for the user's response to Stage 1 before presenting Stage 2 questions.*
@@ -152,10 +154,10 @@ metadata:
   complexity: "low|medium|high"
   generatedAt: "<ISO-8601-timestamp>"
 
-decisions:
+decision_log:
   - decision: "Target Quarkus version <version>"
     reason: "Resolved from <source>"
-  - decision: "Migration mode: <mode>"
+  - decision: "Migration strategy: <strategy>"
     reason: "Selected via <source>"
   # Append each decision made
 ```
