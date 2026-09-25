@@ -99,7 +99,7 @@ In non-interactive mode the interactive prompt step is skipped and the non-inter
 | # | Decision | Interactive | Non-interactive default |
 |---|---|---|---|
 | 1 | Target Quarkus version | Ask: offer API-resolved latest stable or let user specify | Resolved from `code.quarkus.io/api/streams` |
-| 2 | Target Java version | Ask: offer minimum JDK required by the resolved Quarkus version or let user specify | Minimum JDK required by the resolved Quarkus version (today: JDK 17 for Quarkus 3.x, JDK 21 for Quarkus 4.x) |
+| 2 | Target Java version | Ask: offer minimum JDK required by the resolved Quarkus version or let user specify | Minimum JDK required by the resolved Quarkus version |
 | 3 | Migration strategy | Ask: `full-quarkus` or `spring-compat` | `full-quarkus` |
 
 
