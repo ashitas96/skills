@@ -33,7 +33,7 @@ mode. Strategy, Quarkus version, and Java version are resolved ad-hoc inline ins
   once. Downstream modules read the record rather than re-asking or re-inferring.
 - **Token efficiency.** A structured scan written at the start of the run avoids each
   module independently re-reading the source project to detect the same features.
-- **Traceability.** Every decision and its source (`argument | user `)
+- **Traceability.** Every decision and its source (`argument | user | default`)
   must be recoverable from the target directory after the run.
 
 ## Considered Options
@@ -105,55 +105,11 @@ In non-interactive mode the interactive prompt step is skipped and the non-inter
 > Non-interactive defaults for Java version, Quarkus version, and strategy are
 > subject to confirmation — see [issue #53](https://github.com/quarkusio/skills/issues/53).
 
-**Stage 2 — conditional on Stage 1 answers and detected features:**
-
-| # | Decision | Condition | Options |
-|---|---|---|---|
-| 4 | Persistence strategy | `full-quarkus` + JPA detected | Panache active record / Panache repository / Hibernate ORM standard |
-| 5 | REST framework | `full-quarkus` + web detected | Quarkus REST — RESTEasy Reactive (recommended) / RESTEasy Classic |
-| 6 | Messaging transport | Messaging detected (any strategy) | `kafka` / `amqp` / `artemis-jms` |
-| 7 | View technology | View layer detected (any strategy) | Qute (recommended) / MyFaces |
-| 8 | Security approach | `full-quarkus` + Spring Security detected | OIDC / Basic / JWT / None |
-
-If a Stage 2 condition is not met, the question is skipped silently and the
-corresponding `migration_strategy` field is set to `none`.
-
-### Selective detected feature flags
-
-The planning module detects the following features during its source scan. This list
-is **selective** — it covers features relevant to the current module set. It grows
-as new modules are added; each new module declares the flag(s) it depends on.
-
-| Flag | Detected when |
-|---|---|
-| `spring_web` | `@RestController`, `@Controller` in Java sources |
-| `spring_data_jpa` | `JpaRepository`, `@Entity` in Java sources |
-| `spring_security` | `SecurityConfig`, `@EnableWebSecurity` in Java sources |
-| `spring_kafka` | `@KafkaListener`, `KafkaTemplate` in Java sources |
-| `spring_rabbitmq` | `@RabbitListener`, `RabbitTemplate` in Java sources |
-| `spring_jms` | `@JmsListener` in Java sources |
-| `spring_scheduled` | `@Scheduled` in Java sources |
-| `spring_cache` | `@Cacheable`, `@CacheEvict` in Java sources |
-| `view_layer` | Thymeleaf/JSP/FreeMarker/JSF templates in `templates/` or `WEB-INF/` |
-
-The full `detected_features` schema (including flags written by the `discovery` module
-once that module is introduced) is defined in
-[ADR-0003](https://github.com/quarkusio/skills/pull/81/).
+Stage 2 collects conditional decisions (persistence strategy, REST framework, messaging transport, view technology, security approach) based on Stage 1 answers and detected features. If a condition is not met the question is skipped. The full Stage 2 decision table and detection rules are defined in [`modules/planning/planning.md`](../../skills/migrate-spring-to-quarkus/modules/planning/planning.md).
 
 ### `migration-spec.yaml` as shared contract
 
-`migration-spec.yaml` is written by `planning` and read by all downstream modules.
-The full schema is defined in ADR-0003. The planning module's specific contribution is:
-
-- `project.*` — source and target paths, artifact name
-- `source_technology.*` — Spring Boot version, Java version, build tool
-- `target_technology.*` — resolved Quarkus version, Java version, extensions list
-- `detected_features.*` — selective boolean flags from the planning scan (superseded
-  by the `discovery` module's richer scan once that module is introduced)
-- `migration_strategy.*` — all user decisions with `source` field set to `argument | user | default`
-- `metadata.complexity` — `low` / `medium` / `high` based on component count
-- `metadata.generatedAt` — ISO-8601 timestamp
-- `decisions[]` — append-only log of every decision and its reason
+`migration-spec.yaml` is written by `planning` and read by all downstream modules. The full schema is as proposed in [ADR-0003](https://github.com/quarkusio/skills/pull/81/) (not yet merged). The concrete field names, enum values, and YAML structure are defined at implementation time in [`modules/planning/planning.md`](../../skills/migrate-spring-to-quarkus/modules/planning/planning.md).
 
 
 ### Changes to `SKILL.md`
@@ -172,8 +128,8 @@ The table below documents the intended contract between the planning module and 
 | Module | Fields consumed | Module status |
 |---|---|---|
 | `modules/build/` | `target_technology.quarkus_version`, `target_technology.java_version` — writes to `pom.xml` / `build.gradle` | Module Existing (integration pending) |
-| `modules/code/code.md` | `migration_strategy.migration_mode`, `migration_strategy.persistence` — branches between strategies | Module Existing (integration pending) |
-| `modules/frontend/frontend.md` | `migration_strategy.view_layer` — chooses Qute vs. MyFaces path | Module Existing (integration pending) |
+| `modules/code/code.md` | `decisions.strategy`, `decisions.persistence` — branches between strategies | Module Existing (integration pending) |
+| `modules/frontend/frontend.md` | `decisions.view_layer` — chooses Qute vs. MyFaces path | Module Existing (integration pending) |
 | Prerequisite module (#55) | `target_technology.java_version` — validates JDK minimum | Module Planned |
 | Discovery module (#55) | Writes richer `detected_features` flags into the spec | Module Planned |
 | Reporting module (#59) | `decisions[]`, `metadata.complexity`, feature flags — final report | Module Planned |
