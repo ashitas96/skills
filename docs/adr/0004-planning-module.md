@@ -98,12 +98,10 @@ In non-interactive mode the interactive prompt step is skipped and the non-inter
 
 | # | Decision | Interactive | Non-interactive default |
 |---|---|---|---|
-| 1 | Target Quarkus version | Ask: latest stable (resolved via the [code.quarkus.io](https://code.quarkus.io) API) or specify | Latest stable |
-| 2 | Target Java version | Ask: 17 (LTS) or 21 (LTS, virtual threads) — options filtered by resolved Quarkus version (3.x requires JDK 17+, 4.x requires JDK 21+) | 17 (or 21 if Quarkus 4.x) |
+| 1 | Target Quarkus version | Ask: offer API-resolved latest stable or let user specify | Resolved from `code.quarkus.io/api/streams` |
+| 2 | Target Java version | Ask: offer minimum JDK required by the resolved Quarkus version or let user specify | Minimum JDK required by the resolved Quarkus version (today: JDK 17 for Quarkus 3.x, JDK 21 for Quarkus 4.x) |
 | 3 | Migration strategy | Ask: `full-quarkus` or `spring-compat` | `full-quarkus` |
 
-> Non-interactive defaults for Java version, Quarkus version, and strategy are
-> subject to confirmation — see [issue #53](https://github.com/quarkusio/skills/issues/53).
 
 Stage 2 collects conditional decisions (persistence strategy, REST framework, messaging transport, view technology, security approach) based on Stage 1 answers and detected features. If a condition is not met the question is skipped. The full Stage 2 decision table and detection rules are defined in [`modules/planning/planning.md`](../../skills/migrate-spring-to-quarkus/modules/planning/planning.md).
 
