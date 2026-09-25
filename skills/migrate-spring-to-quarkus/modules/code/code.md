@@ -4,6 +4,10 @@ Migrate all Java source code from Spring patterns to Quarkus equivalents.
 
 All files to transform are in `<target>` (already copied there by the build module). Do not modify `<source>`.
 
+Read `<target>/migration-spec.yaml` at module start:
+- `decisions.strategy`: `full-quarkus` vs `spring-compat`
+- `decisions.persistence`: `panache-active-record` vs `panache-repository` vs `hibernate-orm`
+
 Load [references/annotation-map.md](../../references/annotation-map.md) before starting. It contains the complete annotation mapping tables for DI, REST, Data, Security, Cache, Scheduling, and Lifecycle.
 
 ## What to do
@@ -45,9 +49,9 @@ public class Todo extends PanacheEntity {
 
 ## Repository Layer (Full Quarkus strategy)
 
-Two patterns available — choose based on project conventions:
+Choose pattern based on `migration_strategy.persistence` in `<target>/migration-spec.yaml`:
 
-**Active Record** (queries on the entity):
+**Active Record** (`panache-active-record` — queries on the entity):
 ```java
 // Static methods on the entity
 public static List<Todo> findByCompleted(boolean completed) {
@@ -56,7 +60,7 @@ public static List<Todo> findByCompleted(boolean completed) {
 // Usage: Todo.listAll(), Todo.findById(id), Todo.findByCompleted(true)
 ```
 
-**Repository class** (separate from entity):
+**Repository class** (`panache-repository` — separate from entity):
 ```java
 @ApplicationScoped
 public class TodoRepository implements PanacheRepository<Todo> {

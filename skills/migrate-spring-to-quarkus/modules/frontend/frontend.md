@@ -4,6 +4,12 @@ Migrate templates, static assets, and view-related code from Spring MVC + Thymel
 
 All files to transform are in `<target>` (already copied there by the build module). Do not modify `<source>`.
 
+Read `<target>/migration-spec.yaml` at module start:
+- Check `decisions.view_layer`:
+  - `qute`: Proceed with migration to Qute below.
+  - `myfaces`: Note that JSF/MyFaces migration is a follow-up implementation. Leave view code intact with a `// TODO: Migration required — JSF/MyFaces migration not yet supported` comment.
+  - `none`: Skip frontend migration.
+
 ## What to do
 
 - [ ] Ensure `quarkus-rest-qute` dependency is in `<target>` build file

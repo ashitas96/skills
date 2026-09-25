@@ -6,17 +6,8 @@ This is the first module to run. It creates `<target>` and populates it with the
 
 ## Instructions
 
-### Create the target project
-
-Before any transformation, copy the entire source project into the target directory:
-
-1. Create `<target>` if it does not exist.
-2. Copy all files from `<source>` into `<target>`, preserving the directory structure. This includes `src/`, resources, build files, wrapper scripts, and any other project files.
-3. From this point on, all modifications happen in `<target>`. Do not modify `<source>`.
-
-### Detect and migrate the build system
-
-- Detect the build tool by checking which files exist at `<source>`:
+- Read `<target>/migration-spec.yaml` to obtain `target_technology.quarkus_version` and `target_technology.java_version`.
+- Detect the build tool by checking which files exist at the project root:
 
 | File | Build tool | Sub-module |
 |---|---|---|

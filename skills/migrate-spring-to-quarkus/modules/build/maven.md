@@ -83,7 +83,7 @@ All modifications below apply to `<target>/pom.xml` (already copied from source 
 </build>
 ```
 
-Define `quarkus.platform.version` as a Maven property. Do NOT hardcode the version — use the latest Quarkus release.
+Define `quarkus.platform.version` as a Maven property using the `quarkus_version` specified in `<target>/migration-spec.yaml`. Set `maven.compiler.source` / `target` / `<release>` using the target `java_version` from `migration-spec.yaml`.
 
 **Add** Quarkus native profile:
 

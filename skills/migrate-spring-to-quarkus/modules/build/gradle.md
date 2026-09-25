@@ -76,22 +76,22 @@ dependencies {
 }
 ```
 
-Define the version in `gradle.properties`:
+Define the version in `gradle.properties` using the `quarkus_version` from `<target>/migration-spec.yaml`:
 
 ```properties
-quarkusPlatformVersion=3.x.x
+quarkusPlatformVersion=<quarkus_version from migration-spec.yaml>
 ```
 
-Do NOT hardcode the version in the build file — use the latest Quarkus release.
-
 ## Java Compiler Configuration
+
+Use the `java_version` from `<target>/migration-spec.yaml` (e.g. `JavaVersion.VERSION_21` or `JavaVersion.VERSION_17`):
 
 **Groovy DSL**:
 
 ```groovy
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.toVersion(javaVersionFromSpec) // e.g. JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.toVersion(javaVersionFromSpec)
 }
 
 compileJava {

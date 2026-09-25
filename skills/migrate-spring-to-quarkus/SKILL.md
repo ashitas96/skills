@@ -36,55 +36,11 @@ Load the relevant reference file when working on a module:
 | [references/config-map.md](references/config-map.md) | Build module: configuration property migration |
 
 
-## Step 1: Resolve Directories, Analyze & Choose Strategy
+## Step 1: Planning & Strategy Selection
 
-### Directory resolution
+Load and execute [modules/planning/planning.md](modules/planning/planning.md).
 
-The migration uses two directories: a read-only **source** (the Spring project) and a **target** (the Quarkus project to generate).
-
-1. Identify `<source>`: the Spring Boot project directory the user points to.
-2. Resolve `<target>`: default is `<source-name>-quarkus/` as a sibling of `<source>`. Example: if the source is `~/projects/petclinic`, the target is `~/projects/petclinic-quarkus`.
-
-In **interactive mode**, propose the default target path and ask for confirmation together with the strategy question (Step 1 below). In **autonomous mode** (strategy resolved from argument or config file), use the default directly.
-
-If `<target>` already exists, ask the user whether to overwrite it or choose a different path.
-
-Log both resolved paths before continuing:
-```
-Source: <source-path>
-Target: <target-path>
-```
-
-### Analyze the source project
-
-Scan `<source>` to understand what needs to migrate:
-
-- **Build system**: Read `<source>/pom.xml` (Maven) or `<source>/build.gradle(.kts)` (Gradle) -- Spring Boot version, starters, plugins
-- **Java code**: Search `<source>/src/` for Spring annotations (DI, REST, Data, Security, Scheduling)
-- **Configuration**: Read `<source>/src/main/resources/application.properties` or `application.yml`, check for profiles
-- **UI / View layer**: Check for Thymeleaf/JSP templates in `<source>/src/main/resources/templates/`, static resources in `<source>/src/main/resources/static/`
-- **Tests**: Check `<source>/src/test/` for `@SpringBootTest`, `@WebMvcTest`, `@DataJpaTest`
-
-Present a summary table with area, findings, and complexity. Then choose the migration strategy:
-
-### Strategy selection
-
-Resolve the strategy using the following priority (first match wins):
-
-1. **Skill argument** — if the skill was invoked with a `strategy` argument (`spring-compat` or `full-quarkus`), use it directly.
-2. **Project config file** — check for `.quarkus-migration.yml` in `<source>` root. If it exists and contains a `strategy` field, use that value. 
-The file schema is defined in [ADR-0003](https://github.com/quarkusio/skills/issues/79) ([PR #81](https://github.com/quarkusio/skills/pull/81)). Example file:
-   ```yaml
-   # .quarkus-migration.yml
-   strategy: spring-compat   # or full-quarkus
-   ```
-3. **Ask the user** — if neither of the above provided a strategy, ask the user to choose:
-   - **Spring compatibility** (`spring-compat`, recommended): Use `quarkus-spring-web`, `quarkus-spring-data-jpa`, etc. Minimal code changes.
-   - **Full Quarkus** (`full-quarkus`): Replace all Spring annotations with JAX-RS/CDI. More work, full Quarkus experience.
-
-   **Stop here and wait for the user's response before continuing.** Do not ask about git workflow or anything else in the same message.
-
-If the strategy was resolved from an argument or config file, log: `Strategy: <value> (source: <argument|config file>)` and continue without asking.
+The planning module performs the initial scan, detects features, collects user decisions, and writes `<target>/migration-spec.yaml`. All downstream modules rely on this specification as their single source of truth.
 
 ## Step 2: Execute Modules
 
@@ -102,6 +58,7 @@ If the strategy was resolved from an argument or config file, log: `Strategy: <v
 | Module                                        | Gate Check (inspect `<source>`)                                                                                           | Gate Result                                                                              |
 |-----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
 | [jdk](modules/jdk/jdk.md)                     | JDK 21+ required                                   | **ALWAYS** -- stop migration if < 21 |
+| [planning](modules/planning/planning.md)      | Prerequisite/JDK check passed                      | **ALWAYS** — generates `<target>/migration-spec.yaml`                                    |
 | [build](modules/build/build.md)               | Spring Boot parent/starters/`spring-boot-maven-plugin` in `pom.xml`, or Spring Boot/`io.spring.dependency-management` plugins in `build.gradle(.kts)` | **PASS** if Spring Boot build markers found; **SKIP** otherwise                          |
 | [code](modules/code/code.md)                  | Spring annotations in Java sources (`@Component`, `@Service`, `@Controller`, `@Repository`, `@Entity`, `@Autowired`, etc.) | **PASS** if Spring annotations found; **SKIP** otherwise                                 |
 | [messaging](modules/code/messaging.md)        | `@KafkaListener`, `@RabbitListener`, `@JmsListener`, `@SendTo`, `@EnableKafka`, `@EnableRabbit`, `KafkaTemplate`, `RabbitTemplate`, or `JmsTemplate` in Java sources | **PASS** if any found; **SKIP** otherwise                                                |
@@ -112,7 +69,7 @@ If the strategy was resolved from an argument or config file, log: `Strategy: <v
 ### Execution Protocol
 
 ```
-FOR module IN [build, code, messaging, frontend, testing, cleanup]:
+FOR module IN [planning, build, code, messaging, frontend, testing, cleanup]:
 
   1. EVALUATE — inspect <source> for the gate condition
   2. DECIDE
