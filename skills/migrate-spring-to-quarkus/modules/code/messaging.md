@@ -3,6 +3,9 @@
 Migrate Spring messaging code (Kafka, RabbitMQ, JMS) to the Quarkus messaging model
 appropriate to the source broker and protocol.
 
+Read `<target>/migration-spec.yaml` at module start:
+- `decisions.messaging_transport` — the transport resolved during planning (`kafka` / `amqp` / `artemis-jms`). Use this to target the correct Quarkus connector without re-scanning.
+
 Load [references/annotation-map.md](../../references/annotation-map.md) and
 [references/dependency-map.md](../../references/dependency-map.md) before starting.
 

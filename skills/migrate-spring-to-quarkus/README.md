@@ -23,18 +23,31 @@ The skill will analyze your project, ask you to choose a strategy, and execute t
 
 ### Interactive (default)
 
-If you run the skill without any configuration, it will ask you to choose a strategy interactively.
+If you run the skill without any configuration, it will ask you to choose a migration strategy and confirm the Quarkus and Java versions before starting.
 
 ### Project config file
 
-Add a `.quarkus-migration.yml` file to your project root to prepare the migration:
+Add a `.quarkus-migration.yml` file to your project root to pre-configure the migration:
 
 ```yaml
 # .quarkus-migration.yml
-strategy: spring-compat   # or full-quarkus
+
+# Migration strategy (required if you want to skip the strategy prompt)
+strategy: spring-compat       # or full-quarkus
+
+# Target Quarkus version (optional — defaults to latest stable from code.quarkus.io/api/streams)
+quarkus_version: "3.15.1"
+
+# Target Java version (optional — defaults to minimum JDK required by the resolved Quarkus version)
+java_version: "17"
+
+# Run mode (optional — omit for interactive)
+mode: non-interactive         # skips all prompts and applies defaults for any unset fields
 ```
 
-When this file is present, the skill skips the strategy prompt and uses the configured value. This is useful for:
+Any field present in this file is used directly without prompting the user. Fields not present are still asked interactively (unless `mode: non-interactive` is set, in which case defaults are applied for everything).
+
+This is useful for:
 - CI/CD pipelines or automated test runs where no human is present
 - Teams that have already decided on a strategy and don't want to be asked every time
 - Reproducing migrations with consistent settings
@@ -49,7 +62,7 @@ Migrate this project to Quarkus using the compatibility migration strategy
 
 ### Priority order
 
-If multiple sources provide a strategy, the first match wins:
+If multiple sources provide a value for the same decision, the first match wins:
 
 1. Skill argument (highest priority)
 2. `.quarkus-migration.yml` config file
@@ -88,6 +101,8 @@ skills/migrate-spring-to-quarkus/
 ├── SKILL.md                          # Main skill instructions (read by the AI agent)
 ├── README.md                         # This file (for humans)
 ├── modules/                          # Migration modules
+│   ├── planning/
+│   │   └── planning.md               #   Scan project, collect decisions, write migration-spec.yaml
 │   ├── jdk/
 │   │   └── jdk.md                    #   JDK version check
 │   ├── build/

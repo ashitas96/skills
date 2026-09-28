@@ -12,8 +12,8 @@ high level. As proposed in [ADR-0003](https://github.com/quarkusio/skills/pull/8
 the full schema of `migration-spec.yaml` is defined there.
 
 This ADR specifies how the planning module collects user decisions, the selective
-feature flag approach, and the gate dependency between planning and the prerequisite
-module (to be introduced in #55).
+feature flag approach, and the two-pass JDK check split between `jdk.md` and the
+planning module (resolving [#71](https://github.com/quarkusio/skills/issues/71)).
 
 The `migrate-spring-to-quarkus` skill currently has no module that captures critical
 features requiring frequent lookup and user transformation preferences in interactive
@@ -33,7 +33,7 @@ mode. Strategy, Quarkus version, and Java version are resolved ad-hoc inline ins
   once. Downstream modules read the record rather than re-asking or re-inferring.
 - **Token efficiency.** A structured scan written at the start of the run avoids each
   module independently re-reading the source project to detect the same features.
-- **Traceability.** Every decision and its source (`argument | user | default`)
+- **Traceability.** Every decision and its source (`argument | config-file | user | default`)
   must be recoverable from the target directory after the run.
 
 ## Considered Options
@@ -48,7 +48,7 @@ re-derive them, and there is no persistent record in the target directory.
 
 ### Dedicated `modules/planning/planning.md` module writing `migration-spec.yaml`
 
-A new module runs after `prerequisite` and before the transformation modules. It scans
+A new module runs after the JDK check and before the transformation modules. It scans
 the source project, collects decisions from the user (or auto-selects in non-interactive
 mode), and writes `migration-spec.yaml` into the target directory. All downstream
 modules read from this file.
@@ -59,13 +59,34 @@ state #40).
 
 ## Decision
 
-Introduce `modules/planning/planning.md` that runs **ALWAYS**, after `prerequisite`
-checks pass, and writes `migration-spec.yaml` into `<target>/migration-spec.yaml`.
+Introduce `modules/planning/planning.md` that runs **ALWAYS**, after the JDK Pass 1
+check passes, and writes `migration-spec.yaml` into `<target>/migration-spec.yaml`.
+
+### JDK check split (resolves #71)
+
+The JDK version check is split across two modules to handle the chicken-and-egg
+problem: the version-specific minimum depends on the target Quarkus version, which is
+only known after the planning module calls `code.quarkus.io/api/streams`.
+
+- **Pass 1 — `modules/jdk/jdk.md`** (runs before planning, no spec yet): checks the
+  absolute minimum JDK for any supported Quarkus version (**17**). Resolves the floor
+  from skill argument → `.quarkus-migration.yml` → default (17). Stops the migration
+  immediately if not met.
+
+- **Pass 2 — `modules/planning/planning.md` Stage 1 Step 1** (runs inside planning,
+  after the streams API call): derives the version-specific minimum JDK from the
+  `javaCompatibility.versions[0]` field of the resolved Quarkus stream. Stops the
+  migration if the installed JDK is below that minimum, with a suggestion to either
+  upgrade the JDK or choose an older Quarkus stream. Falls back to a static table
+  (3.x=17, 4.x=21) if the API is unreachable.
+
+When `#55` introduces the prerequisite module, `jdk.md` moves there as a simple gate
+alongside `maven.md`/`gradle.md`. At that point Pass 1 and Pass 2 can be consolidated.
 
 ### Gate condition
 
-**ALWAYS** — provided the `prerequisite` module has passed. If any hard prerequisite
-fails (missing JDK, missing build tool), the migration is aborted before planning runs.
+**ALWAYS** — provided `jdk.md` Pass 1 has passed. If Pass 1 fails, the migration is
+aborted before planning runs.
 
 ### `migration-spec.yaml`
 
@@ -79,8 +100,8 @@ originally provided.
 
 The planning module collects decisions in two stages. Stage 1 is always collected
 before Stage 2 questions are shown. In non-interactive mode, defaults are applied
-without asking; all chosen values and their rationale are still written to
-`decisions[]` in `migration-spec.yaml`.
+without asking; all chosen values and their source are recorded in the `decisions`
+block of `migration-spec.yaml` via per-field `*_source` fields.
 
 **Stage 1 — always collect:**
 
@@ -94,7 +115,7 @@ Decisions are resolved in priority order:
 - **`.quarkus-migration.yml`**: a pre-existing config file in the source directory is read next.
 - **interactive prompt**: the user is asked only if neither of the above provides a value.
 
-In non-interactive mode the interactive prompt step is skipped and the non-interactive default is used instead. All resolved values and their source are written to `decisions[]` in `migration-spec.yaml`.
+In non-interactive mode the interactive prompt step is skipped and the non-interactive default is used instead. All resolved values and their source are written to the `decisions` block in `migration-spec.yaml`, each with its own `*_source` field.
 
 | # | Decision | Interactive | Non-interactive default |
 |---|---|---|---|
@@ -112,25 +133,28 @@ Stage 2 collects conditional decisions (persistence strategy, REST framework, me
 
 ### Changes to `SKILL.md`
 
-- Step 1 **Analyze & Choose Strategy** is replaced by a delegation to
-  `modules/planning/planning.md` — the inline scan and strategy question move into the
-  module.
-- The Decision Gate Table gains a `planning` **ALWAYS** row, positioned after
-  `prerequisite` and before all transformation modules.
-- The Execution Protocol `FOR module IN [...]` list is updated accordingly.
+- Step 1 is renamed **JDK Check & Planning** — it first delegates to `modules/jdk/jdk.md`
+  (Pass 1), then to `modules/planning/planning.md`.
+- The Decision Gate Table gains `jdk` and `planning` **ALWAYS** rows before all
+  transformation modules.
+- The Execution Protocol `FOR module IN [...]` list is updated to include `jdk` and
+  `planning` as the first two entries.
 
 ### Planned `migration-spec.yaml` consumers
 
-The table below documents the intended contract between the planning module and each consumer. Existing modules do not yet read from `migration-spec.yaml` — that integration is part of this change. Planned modules do not exist yet.
+The table below documents the intended contract between the planning module and each consumer.
 
 | Module | Fields consumed | Module status |
 |---|---|---|
-| `modules/build/` | `target_technology.quarkus_version`, `target_technology.java_version` — writes to `pom.xml` / `build.gradle` | Module Existing (integration pending) |
-| `modules/code/code.md` | `decisions.strategy`, `decisions.persistence` — branches between strategies | Module Existing (integration pending) |
-| `modules/frontend/frontend.md` | `decisions.view_layer` — chooses Qute vs. MyFaces path | Module Existing (integration pending) |
-| Prerequisite module (#55) | `target_technology.java_version` — validates JDK minimum | Module Planned |
-| Discovery module (#55) | Writes richer `detected_features` flags into the spec | Module Planned |
-| Reporting module (#59) | `decisions[]`, `metadata.complexity`, feature flags — final report | Module Planned |
+| `modules/jdk/jdk.md` | Pass 1: resolves absolute minimum JDK from argument / `.quarkus-migration.yml` / default (17); runs before spec exists | Existing |
+| `modules/build/` | `target_technology.quarkus_version`, `target_technology.java_version` — writes to `pom.xml` / `build.gradle` | Existing |
+| `modules/code/code.md` | `decisions.strategy`, `decisions.persistence` — branches between strategies | Existing |
+| `modules/code/messaging.md` | `decisions.messaging_transport` — targets the correct Quarkus connector | Existing |
+| `modules/frontend/frontend.md` | `decisions.view_layer` — chooses Qute vs. MyFaces vs. keep-jsp path | Existing |
+| `modules/testing/testing.md` | `decisions.strategy` — adjusts test annotation replacement approach | Existing |
+| `modules/cleanup/cleanup.md` | `decisions.strategy` — determines which Spring imports are intentional | Existing |
+| Discovery module (#55) | Writes richer `detected_features` flags into the spec | Planned |
+| Reporting module (#59) | `decisions.*`, `metadata.complexity`, feature flags — final report | Planned |
 
 ## Consequences
 
