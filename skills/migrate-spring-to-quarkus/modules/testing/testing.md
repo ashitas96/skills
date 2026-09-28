@@ -4,6 +4,9 @@ Migrate test infrastructure from Spring Boot Test to Quarkus Test.
 
 All files to transform are in `<target>` (already copied there by the build module). Do not modify `<source>`.
 
+Read `<target>/migration-spec.yaml` at module start:
+- `decisions.strategy` — `full-quarkus` or `spring-compat`. For `spring-compat`, Spring test annotations such as `@SpringBootTest` with `webEnvironment = RANDOM_PORT` may continue to work via the `quarkus-spring-web` extension; prefer `@QuarkusTest` where feasible but do not force the replacement if the test relies on Spring wiring not covered by a compat extension.
+
 Load [references/annotation-map.md](../../references/annotation-map.md) -- see the Testing section for full mapping.
 
 ## What to do

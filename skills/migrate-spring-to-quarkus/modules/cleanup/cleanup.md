@@ -4,6 +4,9 @@ Remove leftover Spring artifacts in `<target>` that survived the per-module migr
 
 All operations below target `<target>`. Do not modify `<source>`.
 
+Read `<target>/migration-spec.yaml` at module start:
+- `decisions.strategy` — `full-quarkus` or `spring-compat`. For `spring-compat`, `org.springframework.*` imports backed by a `quarkus-spring-*` extension are intentional and must not be removed. Only remove Spring imports that have no corresponding compat extension.
+
 ## What to do
 
 - [ ] Remove the `@SpringBootApplication` main class from `<target>` (if still present)
