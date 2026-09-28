@@ -6,12 +6,12 @@
 
 ## Context and Problem Statement
 
-The `migrate-spring-to-quarkus` skill currently organises migration into six modules:
-JDK, Build, Code, Frontend, Testing, and Cleanup. As the skill evolves to keep the
-user in the loop, reduce LLM token consumption, and produce richer output, four
-responsibilities that today either live ad-hoc inside `SKILL.md` or are scattered
-across modules have become hard to extend: environment pre-flight checks, source-app
-metadata extraction, migration-strategy decisioning, and end-of-run reporting.
+The `migrate-spring-to-quarkus` skill currently organizes migration into six modules:
+JDK, Build, Code, Frontend, Testing, and Cleanup. To support better user feedback,
+lower LLM token consumption, and richer outputs, we need to address four
+responsibilities that have become hard to extend due to being scattered or handled
+ad-hoc in `SKILL.md`: environment pre-flight checks, source-app metadata extraction,
+migration strategy selection, and end-of-run reporting.
 
 ## Decision Drivers
 
